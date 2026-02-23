@@ -10,8 +10,11 @@ services:
       - "traefik.http.routers.fodi-eyes.tls.certresolver=letsencrypt"
       - "traefik.http.services.fodi-eyes.loadbalancer.server.port=3000"
     networks:
+      - traefik-public
       - panel-internal
 
 networks:
+  traefik-public:
+    external: true
   panel-internal:
     external: true
