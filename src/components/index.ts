@@ -38,3 +38,8 @@ export * from './ClimateAnomalyPanel';
 export * from './PopulationExposurePanel';
 export * from './InvestmentsPanel';
 export * from './LanguageSelector';
+export * from './OsintArsenalPanel';
+export * from './ItaliaDataPanel';
+export * from './PoliticsItalyPanel';
+export * from './OpenDataPanel';
+export * from './EntitySearchPanel';

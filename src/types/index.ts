@@ -519,6 +519,8 @@ export interface MapLayers {
   commodityHubs: boolean;
   // Gulf FDI layers
   gulfInvestments: boolean;
+  // Italy layers
+  italyBoundaries: boolean;
 }
 
 export interface AIDataCenter {

@@ -43,6 +43,7 @@ import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import type { WeatherAlert } from '@/services/weather';
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
+import { getRegionColor } from '@/services/ondata';
 import { debounce, rafSchedule, getCurrentTheme } from '@/utils/index';
 import {
   INTEL_HOTSPOTS,
@@ -125,7 +126,7 @@ const VIEW_PRESETS: Record<DeckMapView, { longitude: number; latitude: number; z
   global: { longitude: 0, latitude: 20, zoom: 1.5 },
   america: { longitude: -95, latitude: 38, zoom: 3 },
   mena: { longitude: 45, latitude: 28, zoom: 3.5 },
-  eu: { longitude: 15, latitude: 50, zoom: 3.5 },
+  eu: { longitude: 12.5, latitude: 42.5, zoom: 5.5 },
   asia: { longitude: 105, latitude: 35, zoom: 3 },
   latam: { longitude: -60, latitude: -15, zoom: 3 },
   africa: { longitude: 20, latitude: 5, zoom: 3 },
@@ -268,6 +269,7 @@ export class DeckGLMap {
   private ucdpEvents: UcdpGeoEvent[] = [];
   private displacementFlows: DisplacementFlow[] = [];
   private climateAnomalies: ClimateAnomaly[] = [];
+  private italyRegionsGeoJson: GeoJSON.FeatureCollection | null = null;
 
   // Country highlight state
   private countryGeoJsonLoaded = false;
@@ -1138,6 +1140,11 @@ export class DeckGLMap {
     // Gulf FDI investments layer
     if (mapLayers.gulfInvestments) {
       layers.push(this.createGulfInvestmentsLayer());
+    }
+
+    // Italy administrative boundaries layer
+    if ((mapLayers as unknown as Record<string, boolean>).italyBoundaries && this.italyRegionsGeoJson) {
+      layers.push(this.createItalyBoundariesLayer());
     }
 
     // News geo-locations (always shown if data exists)
@@ -2181,6 +2188,26 @@ export class DeckGLMap {
       radiusMinPixels: 5,
       radiusMaxPixels: 28,
       pickable: true,
+    });
+  }
+
+  private createItalyBoundariesLayer(): GeoJsonLayer {
+    return new GeoJsonLayer({
+      id: 'italy-boundaries-layer',
+      data: this.italyRegionsGeoJson!,
+      stroked: true,
+      filled: true,
+      lineWidthMinPixels: 1,
+      getLineColor: [255, 255, 255, 120] as [number, number, number, number],
+      getLineWidth: 800,
+      getFillColor: (f: GeoJSON.Feature) => {
+        const name = (f.properties as Record<string, string>)?.reg_name ||
+          (f.properties as Record<string, string>)?.DEN_REG || '';
+        return getRegionColor(name);
+      },
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 255, 60],
     });
   }
 
@@ -3350,6 +3377,11 @@ export class DeckGLMap {
 
   public setClimateAnomalies(anomalies: ClimateAnomaly[]): void {
     this.climateAnomalies = anomalies;
+    this.render();
+  }
+
+  public setItalyRegionsGeoJson(geojson: GeoJSON.FeatureCollection): void {
+    this.italyRegionsGeoJson = geojson;
     this.render();
   }
 

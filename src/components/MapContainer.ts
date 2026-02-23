@@ -317,6 +317,12 @@ export class MapContainer {
     }
   }
 
+  public setItalyRegionsGeoJson(geojson: GeoJSON.FeatureCollection): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setItalyRegionsGeoJson(geojson);
+    }
+  }
+
   public setCyberThreats(threats: CyberThreat[]): void {
     if (this.useDeckGL) {
       this.deckGLMap?.setCyberThreats(threats);

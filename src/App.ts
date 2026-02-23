@@ -14,7 +14,7 @@ import {
   LAYER_TO_SOURCE,
 } from '@/config';
 import { BETA_MODE } from '@/config/beta';
-import { fetchCategoryFeeds, getFeedFailures, fetchMultipleStocks, fetchCrypto, fetchPredictions, fetchEarthquakes, fetchWeatherAlerts, fetchFredData, fetchInternetOutages, isOutagesConfigured, fetchAisSignals, initAisStream, getAisStatus, disconnectAisStream, isAisConfigured, fetchCableActivity, fetchCableHealth, fetchProtestEvents, getProtestStatus, fetchFlightDelays, fetchMilitaryFlights, fetchMilitaryVessels, initMilitaryVesselStream, isMilitaryVesselTrackingConfigured, fetchUSNIFleetReport, initDB, updateBaseline, calculateDeviation, addToSignalHistory, saveSnapshot, cleanOldSnapshots, analysisWorker, fetchPizzIntStatus, fetchGdeltTensions, fetchNaturalEvents, fetchRecentAwards, fetchOilAnalytics, fetchCyberThreats, drainTrendingSignals } from '@/services';
+import { fetchCategoryFeeds, getFeedFailures, fetchMultipleStocks, fetchCrypto, fetchPredictions, fetchEarthquakes, fetchWeatherAlerts, fetchFredData, fetchInternetOutages, isOutagesConfigured, fetchAisSignals, initAisStream, getAisStatus, disconnectAisStream, isAisConfigured, fetchCableActivity, fetchCableHealth, fetchProtestEvents, getProtestStatus, fetchFlightDelays, fetchMilitaryFlights, fetchMilitaryVessels, initMilitaryVesselStream, isMilitaryVesselTrackingConfigured, fetchUSNIFleetReport, initDB, updateBaseline, calculateDeviation, addToSignalHistory, saveSnapshot, cleanOldSnapshots, analysisWorker, fetchPizzIntStatus, fetchGdeltTensions, fetchNaturalEvents, fetchOilAnalytics, fetchCyberThreats, drainTrendingSignals } from '@/services';
 import { fetchCountryMarkets } from '@/services/prediction';
 import { mlWorker } from '@/services/ml-worker';
 import { clusterNewsHybrid } from '@/services/clustering';
@@ -28,6 +28,7 @@ import { fetchCachedTheaterPosture } from '@/services/cached-theater-posture';
 import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestConflictsForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, startLearning, isInLearningMode, calculateCII, getCountryData, TIER1_COUNTRIES } from '@/services/country-instability';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import { focusInvestmentOnMap } from '@/services/investments-focus';
+import { fetchItalyRegions } from '@/services/ondata';
 import { fetchConflictEvents, fetchUcdpClassifications, fetchHapiSummary, fetchUcdpEvents, deduplicateAgainstAcled } from '@/services/conflict';
 import { fetchUnhcrPopulation } from '@/services/displacement';
 import { fetchClimateAnomalies } from '@/services/climate';
@@ -81,6 +82,11 @@ import {
   PopulationExposurePanel,
   InvestmentsPanel,
   LanguageSelector,
+  OsintArsenalPanel,
+  ItaliaDataPanel,
+  PoliticsItalyPanel,
+  OpenDataPanel,
+  EntitySearchPanel,
 } from '@/components';
 import type { SearchResult } from '@/components/SearchModal';
 import { collectStoryData } from '@/services/story-data';
@@ -1839,7 +1845,7 @@ export class App {
               <span class="variant-label">Fodi-eyes</span>
             </a>
           </div>
-          <span class="logo">FODI-EYES</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          <img src="/logo-fodi.png" alt="Fodi-eyes" class="header-logo" style="height:28px;margin-right:6px;vertical-align:middle;" /><span class="logo">FODI-EYES</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <span class="credit-link">
             <span class="credit-text">by Fodi S.r.l.</span>
           </span>
@@ -1849,10 +1855,10 @@ export class App {
           </div>
           <div class="region-selector">
             <select id="regionSelect" class="region-select">
+              <option value="eu">🇮🇹 Italia</option>
               <option value="global">${t('components.deckgl.views.global')}</option>
               <option value="america">${t('components.deckgl.views.americas')}</option>
               <option value="mena">${t('components.deckgl.views.mena')}</option>
-              <option value="eu">${t('components.deckgl.views.europe')}</option>
               <option value="asia">${t('components.deckgl.views.asia')}</option>
               <option value="latam">${t('components.deckgl.views.latam')}</option>
               <option value="africa">${t('components.deckgl.views.africa')}</option>
@@ -2072,7 +2078,7 @@ export class App {
     this.map = new MapContainer(mapContainer, {
       zoom: this.isMobile ? 2.5 : 1.0,
       pan: { x: 0, y: 0 },  // Centered view to show full world
-      view: this.isMobile ? 'mena' : 'global',
+      view: 'eu',
       layers: this.mapLayers,
       timeRange: '7d',
     });
@@ -2311,6 +2317,22 @@ export class App {
 
       const populationExposurePanel = new PopulationExposurePanel();
       this.panels['population-exposure'] = populationExposurePanel;
+
+      // OSINT & Italy Intelligence panels
+      const osintArsenalPanel = new OsintArsenalPanel();
+      this.panels['osint-arsenal'] = osintArsenalPanel;
+
+      const italiaDataPanel = new ItaliaDataPanel();
+      this.panels['italia-data'] = italiaDataPanel;
+
+      const politicsItalyPanel = new PoliticsItalyPanel();
+      this.panels['politics-italy'] = politicsItalyPanel;
+
+      const openDataPanel = new OpenDataPanel();
+      this.panels['open-data'] = openDataPanel;
+
+      const entitySearchPanel = new EntitySearchPanel();
+      this.panels['entity-search'] = entitySearchPanel;
     }
 
     // GCC Investments Panel (finance variant)
@@ -3122,6 +3144,21 @@ export class App {
     // Tech Readiness panel (tech variant only)
     if (SITE_VARIANT === 'tech') {
       tasks.push({ name: 'techReadiness', task: runGuarded('techReadiness', () => (this.panels['tech-readiness'] as TechReadinessPanel)?.refresh()) });
+    }
+
+    // Italy OSINT panels (full variant only)
+    if (SITE_VARIANT === 'full') {
+      tasks.push({ name: 'italiaData', task: runGuarded('italiaData', () => (this.panels['italia-data'] as ItaliaDataPanel)?.fetchData()) });
+      tasks.push({ name: 'politicsItaly', task: runGuarded('politicsItaly', () => (this.panels['politics-italy'] as PoliticsItalyPanel)?.fetchData()) });
+      // Fetch Italy GeoJSON boundaries for map layer
+      tasks.push({
+        name: 'italyBoundaries', task: runGuarded('italyBoundaries', async () => {
+          const geojson = await fetchItalyRegions();
+          if (geojson && this.map) {
+            this.map.setItalyRegionsGeoJson(geojson);
+          }
+        })
+      });
     }
 
     // Use allSettled to ensure all tasks complete and search index always updates
@@ -4405,16 +4442,15 @@ export class App {
   private async loadGovernmentSpending(): Promise<void> {
     const economicPanel = this.panels['economic'] as EconomicPanel;
     try {
-      const data = await fetchRecentAwards({ daysBack: 7, limit: 15 });
+      const { fetchItaliaSpending } = await import('@/services/italia-spending');
+      const data = await fetchItaliaSpending();
       economicPanel?.updateSpending(data);
-      this.statusPanel?.updateApi('USASpending', { status: data.awards.length > 0 ? 'ok' : 'error' });
-      if (data.awards.length > 0) {
-        dataFreshness.recordUpdate('spending', data.awards.length);
-      } else {
-        dataFreshness.recordError('spending', 'No awards returned');
+      this.statusPanel?.updateApi('USASpending', { status: data.pnrr.milestones.length > 0 ? 'ok' : 'error' });
+      if (data.pnrr.milestones.length > 0) {
+        dataFreshness.recordUpdate('spending', data.pnrr.milestones.length);
       }
     } catch (e) {
-      console.error('[App] Government spending failed:', e);
+      console.error('[App] Italia spending failed:', e);
       this.statusPanel?.updateApi('USASpending', { status: 'error' });
       dataFreshness.recordError('spending', String(e));
     }

@@ -54,13 +54,13 @@ interface FredConfig {
 }
 
 const FRED_SERIES: FredConfig[] = [
-  { id: 'WALCL', name: 'Fed Total Assets', unit: '$B', precision: 0 },
-  { id: 'FEDFUNDS', name: 'Fed Funds Rate', unit: '%', precision: 2 },
-  { id: 'T10Y2Y', name: '10Y-2Y Spread', unit: '%', precision: 2 },
-  { id: 'UNRATE', name: 'Unemployment', unit: '%', precision: 1 },
-  { id: 'CPIAUCSL', name: 'CPI Index', unit: '', precision: 1 },
-  { id: 'DGS10', name: '10Y Treasury', unit: '%', precision: 2 },
-  { id: 'VIXCLS', name: 'VIX', unit: '', precision: 2 },
+  { id: 'ITANRGDP', name: 'PIL Italia', unit: '%', precision: 1 },
+  { id: 'ITACPIALLMINMEI', name: 'Inflazione IT', unit: '%', precision: 1 },
+  { id: 'LRUN74TTITM156S', name: 'Disoccupazione IT', unit: '%', precision: 1 },
+  { id: 'IRLTLT01ITM156N', name: 'BTP 10Y Yield', unit: '%', precision: 2 },
+  { id: 'ECBDFR', name: 'Tasso BCE', unit: '%', precision: 2 },
+  { id: 'GFDEGDQ188S', name: 'Debito/PIL IT', unit: '%', precision: 1 },
+  { id: 'CLVMNACSCAB1GQIT', name: 'PIL Reale IT', unit: '€B', precision: 0 },
 ];
 
 async function fetchSingleFredSeries(config: FredConfig): Promise<FredSeries | null> {
@@ -77,8 +77,7 @@ async function fetchSingleFredSeries(config: FredConfig): Promise<FredSeries | n
     const change = latest.value - previous.value;
     const changePercent = (change / previous.value) * 100;
 
-    let displayValue = latest.value;
-    if (config.id === 'WALCL') displayValue = latest.value / 1000;
+    const displayValue = latest.value;
 
     return {
       id: config.id,
@@ -93,8 +92,7 @@ async function fetchSingleFredSeries(config: FredConfig): Promise<FredSeries | n
   }
 
   const latest = obs[0]!;
-  let displayValue = latest.value;
-  if (config.id === 'WALCL') displayValue = latest.value / 1000;
+  const displayValue = latest.value;
 
   return {
     id: config.id,

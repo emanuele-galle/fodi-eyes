@@ -35,5 +35,7 @@ export * from './infrastructure-cascade';
 export * from './cross-module-integration';
 export * from './data-freshness';
 export * from './usa-spending';
+export * from './italia-spending';
+export * from './ckan-italia';
 export { generateSummary, translateText } from './summarization';
 export * from './cached-theater-posture';

@@ -8,10 +8,17 @@ import { SITE_VARIANT } from './variant';
 // Panel order matters! First panels appear at top of grid.
 // Desired order: live-news, AI Insights, AI Strategic Posture, cii, strategic-risk, then rest
 const FULL_PANELS: Record<string, PanelConfig> = {
-  map: { name: 'Global Map', enabled: true, priority: 1 },
+  // --- Enabled panels (ordered) ---
+  map: { name: 'Mappa Italia', enabled: true, priority: 1 },
   'live-news': { name: 'Live News', enabled: true, priority: 1 },
   italia: { name: 'Italia', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: true, priority: 1 },
+  'politics-italy': { name: 'Politica Italia', enabled: true, priority: 1 },
+  'italia-data': { name: 'Dati Italia', enabled: true, priority: 1 },
+  gov: { name: 'Governo Italiano', enabled: true, priority: 1 },
+  'osint-arsenal': { name: 'OSINT Arsenal', enabled: true, priority: 1 },
+  'entity-search': { name: 'Entità Investigate', enabled: true, priority: 1 },
+  'open-data': { name: 'Open Data Italia', enabled: true, priority: 1 },
   insights: { name: 'AI Insights', enabled: true, priority: 1 },
   'strategic-posture': { name: 'AI Strategic Posture', enabled: true, priority: 1 },
   cii: { name: 'Country Instability', enabled: true, priority: 1 },
@@ -19,33 +26,33 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   intel: { name: 'Intel Feed', enabled: true, priority: 1 },
   'gdelt-intel': { name: 'Live Intelligence', enabled: true, priority: 1 },
   cascade: { name: 'Infrastructure Cascade', enabled: true, priority: 1 },
-  politics: { name: 'World News', enabled: true, priority: 1 },
-  middleeast: { name: 'Middle East', enabled: true, priority: 1 },
-  africa: { name: 'Africa', enabled: true, priority: 1 },
-  latam: { name: 'Latin America', enabled: true, priority: 1 },
-  asia: { name: 'Asia-Pacific', enabled: true, priority: 1 },
-  energy: { name: 'Energy & Resources', enabled: true, priority: 1 },
-  gov: { name: 'Government', enabled: true, priority: 1 },
-  thinktanks: { name: 'Think Tanks', enabled: true, priority: 1 },
-  polymarket: { name: 'Predictions', enabled: true, priority: 1 },
-  commodities: { name: 'Commodities', enabled: true, priority: 1 },
-  markets: { name: 'Markets', enabled: true, priority: 1 },
-  economic: { name: 'Economic Indicators', enabled: true, priority: 1 },
+  politics: { name: 'News Europa', enabled: true, priority: 1 },
+  energy: { name: 'Energia Italia', enabled: true, priority: 1 },
+  thinktanks: { name: 'Think Tank IT/EU', enabled: true, priority: 1 },
+  economic: { name: 'Indicatori Economici IT', enabled: true, priority: 1 },
   finance: { name: 'Financial', enabled: true, priority: 1 },
+  markets: { name: 'Mercati (FTSE MIB)', enabled: true, priority: 1 },
+  commodities: { name: 'Commodities', enabled: true, priority: 1 },
   tech: { name: 'Technology', enabled: true, priority: 2 },
-  crypto: { name: 'Crypto', enabled: true, priority: 2 },
-  heatmap: { name: 'Sector Heatmap', enabled: true, priority: 2 },
-  ai: { name: 'AI/ML', enabled: true, priority: 2 },
-  layoffs: { name: 'Layoffs Tracker', enabled: true, priority: 2 },
-  monitors: { name: 'My Monitors', enabled: true, priority: 2 },
   'satellite-fires': { name: 'Fires', enabled: true, priority: 2 },
-  'macro-signals': { name: 'Market Radar', enabled: true, priority: 2 },
-  'etf-flows': { name: 'BTC ETF Tracker', enabled: true, priority: 2 },
-  stablecoins: { name: 'Stablecoins', enabled: true, priority: 2 },
-  'ucdp-events': { name: 'UCDP Conflict Events', enabled: true, priority: 2 },
-  displacement: { name: 'UNHCR Displacement', enabled: true, priority: 2 },
   climate: { name: 'Climate Anomalies', enabled: true, priority: 2 },
-  'population-exposure': { name: 'Population Exposure', enabled: true, priority: 2 },
+  monitors: { name: 'My Monitors', enabled: true, priority: 2 },
+  // --- Disabled panels ---
+  middleeast: { name: 'Middle East', enabled: false, priority: 1 },
+  africa: { name: 'Africa', enabled: false, priority: 1 },
+  latam: { name: 'Latin America', enabled: false, priority: 1 },
+  asia: { name: 'Asia-Pacific', enabled: false, priority: 1 },
+  polymarket: { name: 'Predictions', enabled: false, priority: 1 },
+  layoffs: { name: 'Layoffs Tracker', enabled: false, priority: 2 },
+  stablecoins: { name: 'Stablecoins', enabled: false, priority: 2 },
+  'etf-flows': { name: 'BTC ETF Tracker', enabled: false, priority: 2 },
+  'macro-signals': { name: 'Market Radar', enabled: false, priority: 2 },
+  displacement: { name: 'UNHCR Displacement', enabled: false, priority: 2 },
+  'population-exposure': { name: 'Population Exposure', enabled: false, priority: 2 },
+  'ucdp-events': { name: 'UCDP Conflict Events', enabled: false, priority: 2 },
+  crypto: { name: 'Crypto', enabled: false, priority: 2 },
+  heatmap: { name: 'Sector Heatmap', enabled: false, priority: 2 },
+  ai: { name: 'AI/ML', enabled: false, priority: 2 },
 };
 
 const FULL_MAP_LAYERS: MapLayers = {
@@ -87,6 +94,7 @@ const FULL_MAP_LAYERS: MapLayers = {
   centralBanks: false,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: true,
 };
 
 const FULL_MOBILE_MAP_LAYERS: MapLayers = {
@@ -128,6 +136,7 @@ const FULL_MOBILE_MAP_LAYERS: MapLayers = {
   centralBanks: false,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: false,
 };
 
 // ============================================
@@ -209,6 +218,7 @@ const TECH_MAP_LAYERS: MapLayers = {
   centralBanks: false,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: false,
 };
 
 const TECH_MOBILE_MAP_LAYERS: MapLayers = {
@@ -250,6 +260,7 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   centralBanks: false,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: false,
 };
 
 // ============================================
@@ -326,6 +337,7 @@ const FINANCE_MAP_LAYERS: MapLayers = {
   centralBanks: true,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: false,
 };
 
 const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
@@ -367,6 +379,7 @@ const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
   centralBanks: true,
   commodityHubs: false,
   gulfInvestments: false,
+  italyBoundaries: false,
 };
 
 // ============================================

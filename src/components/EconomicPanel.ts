@@ -1,9 +1,9 @@
 import { Panel } from './Panel';
 import type { FredSeries, OilAnalytics } from '@/services/economic';
 import { t } from '@/services/i18n';
-import type { SpendingSummary } from '@/services/usa-spending';
+import type { ItaliaSpendingSummary } from '@/services/italia-spending';
 import { getChangeClass, formatChange, formatOilValue, getTrendIndicator, getTrendColor } from '@/services/economic';
-import { formatAwardAmount, getAwardTypeIcon } from '@/services/usa-spending';
+import { formatEuroAmount } from '@/services/italia-spending';
 import { escapeHtml } from '@/utils/sanitize';
 import { isFeatureAvailable } from '@/services/runtime-config';
 import { isDesktopRuntime } from '@/services/runtime';
@@ -13,7 +13,7 @@ type TabId = 'indicators' | 'oil' | 'spending';
 export class EconomicPanel extends Panel {
   private fredData: FredSeries[] = [];
   private oilData: OilAnalytics | null = null;
-  private spendingData: SpendingSummary | null = null;
+  private spendingData: ItaliaSpendingSummary | null = null;
   private lastUpdate: Date | null = null;
   private activeTab: TabId = 'indicators';
 
@@ -32,7 +32,7 @@ export class EconomicPanel extends Panel {
     this.render();
   }
 
-  public updateSpending(data: SpendingSummary): void {
+  public updateSpending(data: ItaliaSpendingSummary): void {
     this.spendingData = data;
     this.render();
   }
@@ -45,7 +45,7 @@ export class EconomicPanel extends Panel {
 
   private render(): void {
     const hasOil = this.oilData && (this.oilData.wtiPrice || this.oilData.brentPrice);
-    const hasSpending = this.spendingData && this.spendingData.awards.length > 0;
+    const hasSpending = this.spendingData && (this.spendingData.pnrr.milestones.length > 0 || this.spendingData.tenders.length > 0);
 
     // Build tabs HTML
     const tabsHtml = `
@@ -108,9 +108,9 @@ export class EconomicPanel extends Panel {
 
   private getSourceLabel(): string {
     switch (this.activeTab) {
-      case 'indicators': return 'FRED';
+      case 'indicators': return 'FRED (IT)';
       case 'oil': return 'EIA';
-      case 'spending': return 'USASpending.gov';
+      case 'spending': return 'Italia Domani / ANAC';
     }
   }
 
@@ -192,32 +192,48 @@ export class EconomicPanel extends Panel {
   }
 
   private renderSpending(): string {
-    if (!this.spendingData || this.spendingData.awards.length === 0) {
+    if (!this.spendingData) {
       return `<div class="economic-empty">${t('components.economic.noSpending')}</div>`;
     }
 
-    const { awards, totalAmount, periodStart, periodEnd } = this.spendingData;
+    const { pnrr, tenders } = this.spendingData;
+    const pctDisbursed = pnrr.totalBudget > 0 ? ((pnrr.disbursed / pnrr.totalBudget) * 100).toFixed(1) : '0';
 
     return `
       <div class="spending-summary">
         <div class="spending-total">
-          ${escapeHtml(formatAwardAmount(totalAmount))} ${t('components.economic.in')} ${escapeHtml(String(awards.length))} ${t('components.economic.awards')}
-          <span class="spending-period">${escapeHtml(periodStart)} – ${escapeHtml(periodEnd)}</span>
+          PNRR: ${escapeHtml(formatEuroAmount(pnrr.disbursed * 1_000_000_000))} / ${escapeHtml(formatEuroAmount(pnrr.totalBudget * 1_000_000_000))}
+          <span class="spending-period">${escapeHtml(pctDisbursed)}% erogato</span>
         </div>
       </div>
       <div class="spending-list">
-        ${awards.slice(0, 8).map(award => `
+        ${pnrr.milestones.map(m => `
           <div class="spending-award">
             <div class="award-header">
-              <span class="award-icon">${escapeHtml(getAwardTypeIcon(award.awardType))}</span>
-              <span class="award-amount">${escapeHtml(formatAwardAmount(award.amount))}</span>
+              <span class="award-icon">🏗️</span>
+              <span class="award-amount">${escapeHtml(formatEuroAmount(m.amount * 1_000_000_000))}</span>
             </div>
-            <div class="award-recipient">${escapeHtml(award.recipientName)}</div>
-            <div class="award-agency">${escapeHtml(award.agency)}</div>
-            ${award.description ? `<div class="award-desc">${escapeHtml(award.description.slice(0, 100))}${award.description.length > 100 ? '...' : ''}</div>` : ''}
+            <div class="award-recipient">${escapeHtml(m.pillar)}</div>
+            <div class="award-agency">${escapeHtml(m.description)}</div>
           </div>
         `).join('')}
       </div>
+      ${tenders.length > 0 ? `
+        <div class="spending-summary" style="margin-top: 8px;">
+          <div class="spending-total">Ultimi Bandi Pubblici</div>
+        </div>
+        <div class="spending-list">
+          ${tenders.slice(0, 5).map(tender => `
+            <div class="spending-award">
+              <div class="award-header">
+                <span class="award-icon">📋</span>
+              </div>
+              <div class="award-recipient">${escapeHtml(tender.title.slice(0, 80))}${tender.title.length > 80 ? '...' : ''}</div>
+              <div class="award-agency">${escapeHtml(tender.entity)}</div>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
     `;
   }
 }
