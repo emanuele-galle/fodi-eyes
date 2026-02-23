@@ -1,6 +1,5 @@
 import { PredictionServiceClient } from '@/generated/client/worldmonitor/prediction/v1/service_client';
 import { createCircuitBreaker } from '@/utils';
-import { SITE_VARIANT } from '@/config';
 import { isDesktopRuntime } from '@/services/runtime';
 import { tryInvokeTauri } from '@/services/tauri-bridge';
 
@@ -174,11 +173,6 @@ const GEOPOLITICAL_TAGS = [
   'economy', 'fed', 'inflation',
 ];
 
-const TECH_TAGS = [
-  'ai', 'tech', 'crypto', 'science',
-  'elon-musk', 'business', 'economy',
-];
-
 const EXCLUDE_KEYWORDS = [
   'nba', 'nfl', 'mlb', 'nhl', 'fifa', 'world cup', 'super bowl', 'championship',
   'playoffs', 'oscar', 'grammy', 'emmy', 'box office', 'movie', 'album', 'song',
@@ -252,7 +246,7 @@ async function fetchTopMarkets(): Promise<PredictionMarket[]> {
 
 export async function fetchPredictions(): Promise<PredictionMarket[]> {
   return breaker.execute(async () => {
-    const tags = SITE_VARIANT === 'tech' ? TECH_TAGS : GEOPOLITICAL_TAGS;
+    const tags = GEOPOLITICAL_TAGS;
 
     const eventResults = await Promise.all(tags.map(tag => fetchEventsByTag(tag, 20)));
 

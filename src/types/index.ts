@@ -483,43 +483,17 @@ export interface MapLayers {
   conflicts: boolean;
   bases: boolean;
   cables: boolean;
-  pipelines: boolean;
   hotspots: boolean;
-  ais: boolean;
   nuclear: boolean;
-  irradiators: boolean;
   sanctions: boolean;
   weather: boolean;
   economic: boolean;
   waterways: boolean;
   outages: boolean;
   cyberThreats: boolean;
-  datacenters: boolean;
-  protests: boolean;
-  flights: boolean;
-  military: boolean;
   natural: boolean;
-  spaceports: boolean;
-  minerals: boolean;
   fires: boolean;
-  // Data source layers
-  ucdpEvents: boolean;
-  displacement: boolean;
   climate: boolean;
-  // Tech variant layers
-  startupHubs: boolean;
-  cloudRegions: boolean;
-  accelerators: boolean;
-  techHQs: boolean;
-  techEvents: boolean;
-  // Finance variant layers
-  stockExchanges: boolean;
-  financialCenters: boolean;
-  centralBanks: boolean;
-  commodityHubs: boolean;
-  // Gulf FDI layers
-  gulfInvestments: boolean;
-  // Italy layers
   italyBoundaries: boolean;
 }
 

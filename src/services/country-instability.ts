@@ -2,8 +2,51 @@ import type { SocialUnrestEvent, MilitaryFlight, MilitaryVessel, ClusteredEvent,
 import { INTEL_HOTSPOTS, CONFLICT_ZONES, STRATEGIC_WATERWAYS } from '@/config/geo';
 import { TIER1_COUNTRIES } from '@/config/countries';
 import { focalPointDetector } from './focal-point-detector';
-import type { ConflictEvent, UcdpConflictStatus, HapiConflictSummary } from './conflict';
-import type { CountryDisplacement } from '@/services/displacement';
+// Inline types (conflict and displacement services removed)
+interface ConflictEvent {
+  id: string;
+  eventType: string;
+  subEventType: string;
+  country: string;
+  region?: string;
+  location: string;
+  lat: number;
+  lon: number;
+  date: string;
+  fatalities: number;
+  actors: string[];
+  source: string;
+}
+interface UcdpConflictStatus {
+  conflictId: number;
+  country: string;
+  region: string;
+  type: string;
+  intensity: string;
+  side_a: string;
+  side_b: string;
+  startDate: string;
+  deathsBest: number;
+}
+interface HapiConflictSummary {
+  country: string;
+  countryCode: string;
+  refugeesOrigin: number;
+  refugeesAsylum: number;
+  idps: number;
+  foodInsecurityPhase35: number;
+  populationPercentPhase35: number;
+  eventsPoliticalViolence: number;
+}
+interface CountryDisplacement {
+  code: string;
+  name: string;
+  refugees: number;
+  asylumSeekers: number;
+  idps: number;
+  stateless: number;
+  totalDisplaced: number;
+}
 import type { ClimateAnomaly } from '@/services/climate';
 import { getCountryAtCoordinates } from './country-geometry';
 
@@ -552,6 +595,7 @@ function getUcdpFloor(data: CountryData): number {
     case 'war': return 70;
     case 'minor': return 50;
     case 'none': return 0;
+    default: return 0;
   }
 }
 

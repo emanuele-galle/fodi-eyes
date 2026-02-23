@@ -5,13 +5,12 @@ import { parallelAnalysis, type AnalyzedHeadline } from '@/services/parallel-ana
 import { signalAggregator, logSignalSummary, type RegionalConvergence } from '@/services/signal-aggregator';
 import { focalPointDetector } from '@/services/focal-point-detector';
 import { ingestNewsForCII } from '@/services/country-instability';
-import { getTheaterPostureSummaries } from '@/services/military-surge';
+import { getCachedPosture } from '@/services/cached-theater-posture';
 import { isMobileDevice } from '@/utils';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
-import { SITE_VARIANT } from '@/config';
 import { getPersistentCache, setPersistentCache } from '@/services/persistent-cache';
 import { t } from '@/services/i18n';
-import type { ClusteredEvent, FocalPoint, MilitaryFlight } from '@/types';
+import type { ClusteredEvent, FocalPoint } from '@/types';
 
 export class InsightsPanel extends Panel {
   private isHidden = false;
@@ -20,7 +19,6 @@ export class InsightsPanel extends Panel {
   private lastMissedStories: AnalyzedHeadline[] = [];
   private lastConvergenceZones: RegionalConvergence[] = [];
   private lastFocalPoints: FocalPoint[] = [];
-  private lastMilitaryFlights: MilitaryFlight[] = [];
   private static readonly BRIEF_COOLDOWN_MS = 120000; // 2 min cooldown (API has limits)
   private static readonly BRIEF_CACHE_KEY = 'summary:world-brief';
 
@@ -38,35 +36,22 @@ export class InsightsPanel extends Panel {
     }
   }
 
-  public setMilitaryFlights(flights: MilitaryFlight[]): void {
-    this.lastMilitaryFlights = flights;
-  }
-
   private getTheaterPostureContext(): string {
-    if (this.lastMilitaryFlights.length === 0) {
-      return '';
-    }
-
-    const postures = getTheaterPostureSummaries(this.lastMilitaryFlights);
-    const significant = postures.filter(
+    const cached = getCachedPosture();
+    if (!cached) return '';
+    const significant = cached.postures.filter(
       (p) => p.postureLevel === 'critical' || p.postureLevel === 'elevated' || p.strikeCapable
     );
-
-    if (significant.length === 0) {
-      return '';
-    }
-
+    if (significant.length === 0) return '';
     const lines = significant.map((p) => {
       const parts: string[] = [];
       parts.push(`${p.theaterName}: ${p.totalAircraft} aircraft`);
       parts.push(`(${p.postureLevel.toUpperCase()})`);
       if (p.strikeCapable) parts.push('STRIKE CAPABLE');
-      parts.push(`- ${p.summary}`);
       if (p.targetNation) parts.push(`Focus: ${p.targetNation}`);
       return parts.join(' ');
     });
-
-    return `\n\nCRITICAL MILITARY POSTURE:\n${lines.join('\n')}`;
+    return `\n\nMILITARY POSTURE:\n${lines.join('\n')}`;
   }
 
 
@@ -277,42 +262,21 @@ export class InsightsPanel extends Panel {
       let signalSummary: ReturnType<typeof signalAggregator.getSummary>;
       let focalSummary: ReturnType<typeof focalPointDetector.analyze>;
 
-      if (SITE_VARIANT === 'full') {
-        signalSummary = signalAggregator.getSummary();
-        this.lastConvergenceZones = signalSummary.convergenceZones;
-        if (signalSummary.totalSignals > 0) {
-          logSignalSummary();
-        }
+      signalSummary = signalAggregator.getSummary();
+      this.lastConvergenceZones = signalSummary.convergenceZones;
+      if (signalSummary.totalSignals > 0) {
+        logSignalSummary();
+      }
 
-        // Run focal point detection (correlates news entities with map signals)
-        focalSummary = focalPointDetector.analyze(clusters, signalSummary);
-        this.lastFocalPoints = focalSummary.focalPoints;
-        if (focalSummary.focalPoints.length > 0) {
-          focalPointDetector.logSummary();
-          // Ingest news for CII BEFORE signaling (so CII has data when it calculates)
-          ingestNewsForCII(clusters);
-          // Signal CII to refresh now that focal points AND news data are available
-          window.dispatchEvent(new CustomEvent('focal-points-ready'));
-        }
-      } else {
-        // Tech variant: no geopolitical signals, just summarize tech news
-        signalSummary = {
-          timestamp: new Date(),
-          totalSignals: 0,
-          byType: {} as Record<string, number>,
-          convergenceZones: [],
-          topCountries: [],
-          aiContext: '',
-        };
-        focalSummary = {
-          focalPoints: [],
-          aiContext: '',
-          timestamp: new Date(),
-          topCountries: [],
-          topCompanies: [],
-        };
-        this.lastConvergenceZones = [];
-        this.lastFocalPoints = [];
+      // Run focal point detection (correlates news entities with map signals)
+      focalSummary = focalPointDetector.analyze(clusters, signalSummary);
+      this.lastFocalPoints = focalSummary.focalPoints;
+      if (focalSummary.focalPoints.length > 0) {
+        focalPointDetector.logSummary();
+        // Ingest news for CII BEFORE signaling (so CII has data when it calculates)
+        ingestNewsForCII(clusters);
+        // Signal CII to refresh now that focal points AND news data are available
+        window.dispatchEvent(new CustomEvent('focal-points-ready'));
       }
 
       if (importantClusters.length === 0) {
@@ -340,11 +304,8 @@ export class InsightsPanel extends Panel {
         this.setProgress(3, totalSteps, t('components.insights.generatingBrief'));
 
         // Pass focal point context + theater posture to AI for correlation-aware summarization
-        // Tech variant: no geopolitical context, just tech news summarization
-        const theaterContext = SITE_VARIANT === 'full' ? this.getTheaterPostureContext() : '';
-        const geoContext = SITE_VARIANT === 'full'
-          ? (focalSummary.aiContext || signalSummary.aiContext) + theaterContext
-          : '';
+        const theaterContext = this.getTheaterPostureContext();
+        const geoContext = (focalSummary.aiContext || signalSummary.aiContext) + theaterContext;
         const result = await generateSummary(titles, (_step, _total, msg) => {
           // Show sub-progress for summarization
           this.setProgress(3, totalSteps, `Generating brief: ${msg}`);
@@ -406,7 +367,7 @@ export class InsightsPanel extends Panel {
   private renderWorldBrief(brief: string): string {
     return `
       <div class="insights-brief">
-        <div class="insights-section-title">${SITE_VARIANT === 'tech' ? '🚀 TECH BRIEF' : '🌍 WORLD BRIEF'}</div>
+        <div class="insights-section-title">🌍 WORLD BRIEF</div>
         <div class="insights-brief-text">${escapeHtml(brief)}</div>
       </div>
     `;

@@ -5,7 +5,25 @@
  * Persists to localStorage so data shows instantly on reload.
  */
 
-import type { TheaterPostureSummary } from './military-surge';
+// Inline type (military-surge service removed)
+export interface TheaterPostureSummary {
+  theaterId: string;
+  theaterName: string;
+  shortName: string;
+  targetNation: string | null;
+  fighters: number; tankers: number; awacs: number; reconnaissance: number;
+  transport: number; bombers: number; drones: number; totalAircraft: number;
+  destroyers: number; frigates: number; carriers: number; submarines: number;
+  patrol: number; auxiliaryVessels: number; totalVessels: number;
+  byOperator: Record<string, number>;
+  postureLevel: 'normal' | 'elevated' | 'critical';
+  strikeCapable: boolean;
+  trend: 'increasing' | 'stable' | 'decreasing';
+  changePercent: number;
+  summary: string; headline: string;
+  centerLat: number; centerLon: number;
+  bounds?: { north: number; south: number; east: number; west: number };
+}
 import {
   MilitaryServiceClient,
   type GetTheaterPostureResponse,

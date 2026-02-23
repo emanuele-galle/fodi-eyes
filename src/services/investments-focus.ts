@@ -11,7 +11,7 @@ export function focusInvestmentOnMap(
   lat: number,
   lon: number
 ): void {
-  map?.enableLayer('gulfInvestments');
-  mapLayers.gulfInvestments = true;
+  map?.enableLayer('economic');
+  mapLayers.economic = true;
   map?.setCenter(lat, lon, 6);
 }
