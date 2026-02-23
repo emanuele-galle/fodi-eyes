@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env.local
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fodi-eyes.rule=Host(`fodi-eyes.fodivps2.cloud`)"
+      - "traefik.http.routers.fodi-eyes.entrypoints=websecure"
+      - "traefik.http.routers.fodi-eyes.tls.certresolver=letsencrypt"
+      - "traefik.http.services.fodi-eyes.loadbalancer.server.port=3000"
+    networks:
+      - panel-internal
+
+networks:
+  panel-internal:
+    external: true
