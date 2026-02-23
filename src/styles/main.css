@@ -488,33 +488,7 @@ canvas,
 }
 
 /* Region Selector in Header */
-.region-selector {
-  display: flex;
-  align-items: center;
-}
-
-.region-select {
-  padding: 4px 24px 4px 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-}
-
-.region-select:hover {
-  border-color: var(--green);
-}
-
-.region-select:focus {
-  outline: none;
-  border-color: var(--green);
-}
+/* region-selector removed — map-centered layout */
 
 .header-center {
   display: flex;
@@ -680,128 +654,150 @@ canvas,
   font-family: inherit;
 }
 
+/* ── Map-centered layout with sidebar ── */
 .main-content {
   flex: 1 1 0;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  flex-direction: row;
+  overflow: hidden;
   background: var(--bg);
   width: 100%;
-}
-
-.map-section {
-  height: 50vh;
-  min-height: 350px;
-  max-height: 90vh;
-  /* Allow resize up to 90% of viewport */
-  border: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
   position: relative;
 }
 
-.map-section.hidden {
-  display: none;
-}
-
-.map-section .panel-header {
-  flex-shrink: 0;
-}
-
-.map-section .map-container {
+.map-fullscreen {
   flex: 1;
   position: relative;
+  min-width: 0;
 }
 
-.map-resize-handle {
+.map-fullscreen .map-container {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 8px;
-  cursor: ns-resize;
-  background: linear-gradient(to bottom, transparent, var(--border));
-  z-index: 200;
+  inset: 0;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 420px;
+  max-width: 90vw;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  transition: margin-right 0.3s ease;
+  overflow: hidden;
+  z-index: 50;
 }
 
-.map-resize-handle::after {
-  content: '';
-  width: 40px;
-  height: 3px;
-  background: var(--text-dim);
-  border-radius: 2px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+.sidebar.collapsed {
+  margin-right: -420px;
 }
 
-.map-resize-handle:hover::after {
-  opacity: 1;
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
 }
 
-.map-section.resizing {
-  user-select: none;
-}
-
-.map-section.resizing .map-resize-handle::after {
-  background: var(--green);
-  opacity: 1;
-}
-
-.map-section.pinned {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.map-pin-btn {
+.sidebar-tab {
+  flex: 1;
+  padding: 10px 4px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: none;
+  border-bottom: 2px solid transparent;
   color: var(--text-dim);
-  padding: 4px 8px;
-  border-radius: 4px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s;
+}
+
+.sidebar-tab:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.sidebar-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+
+.sidebar-tab-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sidebar-tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+}
+
+/* Panels inside sidebar are full-width, no grid */
+.sidebar-content .panel {
+  width: 100% !important;
+  float: none !important;
+  height: auto;
+  min-height: 200px;
+  max-height: 500px;
+  cursor: default;
+}
+
+.sidebar-content .panel-wide {
+  width: 100% !important;
+}
+
+/* ── Sidebar toggle button ── */
+.sidebar-toggle {
+  position: absolute;
+  right: 420px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 51;
+  width: 24px;
+  height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+  color: var(--text-dim);
+  font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: right 0.3s ease, background 0.15s;
 }
 
-.map-pin-btn:hover {
+.sidebar-toggle:hover {
   background: var(--surface-hover);
   color: var(--text);
-  border-color: var(--text-dim);
 }
 
-.map-pin-btn.active {
-  background: var(--green);
-  border-color: var(--green);
-  color: var(--bg);
+.sidebar.collapsed ~ .sidebar-toggle {
+  right: 0;
 }
 
-.map-pin-btn.active:hover {
-  background: var(--green-dim);
-}
-
+/* Legacy classes kept for compatibility */
 .panels-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  grid-auto-flow: row dense;
-  grid-auto-rows: minmax(200px, 380px);
-  gap: 4px;
-  padding: 4px;
-  align-content: start;
-  align-items: stretch;
-  min-height: 0;
-  position: relative;
-  z-index: 1;
-  /* This ensures panels scroll UNDER the pinned map (z-index: 100) */
+  display: none;
 }
 
 .panel {
@@ -8025,30 +8021,39 @@ a.prediction-link:hover {
     display: none !important;
   }
 
-  /* Single-column panel layout on mobile */
-  .panels-grid {
-    display: flex !important;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px;
+  /* Mobile: sidebar as bottom sheet */
+  .main-content {
+    flex-direction: column !important;
   }
 
-  .panel {
+  .map-fullscreen {
+    flex: 1;
+    min-height: 40vh;
+  }
+
+  .sidebar {
     width: 100% !important;
-    min-height: 300px;
+    max-width: 100vw;
+    height: 60vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.collapsed {
+    margin-right: 0;
+    transform: translateY(calc(100% - 44px));
+  }
+
+  .sidebar-toggle {
+    display: none !important;
+  }
+
+  .sidebar-content .panel {
+    min-height: 250px;
     max-height: 400px;
   }
 
-  /* Make map section smaller on mobile to show panels */
-  .map-section {
-    height: 40vh !important;
-    min-height: 250px !important;
-    max-height: 50vh !important;
-  }
-
-  /* Hide pin button and resize handles on mobile */
-  .map-pin-btn,
-  .map-resize-handle,
   .panel-resize-handle {
     display: none !important;
   }
@@ -12159,7 +12164,7 @@ a.prediction-link:hover {
 }
 
 /* Push content down when critical banner is visible */
-body.has-critical-banner .panels-grid {
+body.has-critical-banner .sidebar-content {
   padding-top: 50px;
 }
 
@@ -14379,58 +14384,18 @@ body.has-critical-banner .panels-grid {
   color: var(--text-dim, #888);
 }
 
-/* ── Ultra-wide layout: map left, panels wrap around ── */
+/* ── Ultra-wide: wider sidebar ── */
 @media (min-width: 2000px) {
-  .main-content {
-    --ultrawide-wide-panel-height: clamp(280px, 31vh, 420px);
-    display: block;
-    overflow-y: auto;
+  .sidebar {
+    width: 520px;
   }
-
-  .map-section {
-    float: left;
-    width: 60%;
-    /* Default map height tracks two stacked wide media panels (+ float margins). */
-    height: calc(var(--ultrawide-wide-panel-height) + var(--ultrawide-wide-panel-height) + 12px);
-    min-height: 320px;
-    max-height: 90vh;
-    margin: 0 4px 4px 0;
+  .sidebar.collapsed {
+    margin-right: -520px;
   }
-
-  .map-section.pinned {
-    position: relative;
+  .sidebar-toggle {
+    right: 520px;
   }
-
-  .map-resize-handle {
-    /* Keep resize available on ultrawide so users can fine-tune map/panel balance. */
-    display: flex;
-  }
-
-  .panels-grid {
-    display: contents;
-  }
-
-  .panel {
-    float: left;
-    width: calc(20% - 8px);
-    height: 320px;
-    min-height: 200px;
-    margin: 3px;
-  }
-
-  .panel-wide {
-    /* One wide tile must fit exactly in the 40% rail beside the map. */
-    width: calc(40% - 10px);
-    /* Keep two media-heavy wide tiles stackable beside the map on ultrawide screens. */
-    height: var(--ultrawide-wide-panel-height);
-    min-height: 280px;
-    max-height: 420px;
-  }
-
-  .panel.span-1,
-  .panel.span-2,
-  .panel.span-3,
-  .panel.span-4 {
-    grid-row: unset !important;
+  .sidebar.collapsed ~ .sidebar-toggle {
+    right: 0;
   }
 }

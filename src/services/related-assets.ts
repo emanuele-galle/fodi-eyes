@@ -2,11 +2,8 @@ import type { ClusteredEvent, RelatedAsset, AssetType, RelatedAssetContext } fro
 import { t } from '@/services/i18n';
 import {
   INTEL_HOTSPOTS,
-  CONFLICT_ZONES,
   MILITARY_BASES,
   UNDERSEA_CABLES,
-  NUCLEAR_FACILITIES,
-  AI_DATA_CENTERS,
   PIPELINES,
 } from '@/config';
 
@@ -56,14 +53,7 @@ function inferOrigin(titles: string[]): AssetOrigin | null {
     score: countKeywordMatches(titles, hotspot.keywords),
   })).filter(candidate => candidate.score > 0);
 
-  const conflictCandidates = CONFLICT_ZONES.map((conflict) => ({
-    label: conflict.name,
-    lat: conflict.center[1],
-    lon: conflict.center[0],
-    score: countKeywordMatches(titles, conflict.keywords ?? []),
-  })).filter(candidate => candidate.score > 0);
-
-  const allCandidates = [...hotspotCandidates, ...conflictCandidates];
+  const allCandidates = [...hotspotCandidates];
   if (allCandidates.length === 0) return null;
 
   return allCandidates.sort((a, b) => b.score - a.score)[0] ?? null;
@@ -103,11 +93,11 @@ function buildAssetIndex(type: AssetType): Array<{ id: string; name: string; lat
         return { id: cable.id, name: cable.name, lat: mid.lat, lon: mid.lon };
       });
     case 'datacenter':
-      return AI_DATA_CENTERS.map(dc => ({ id: dc.id, name: dc.name, lat: dc.lat, lon: dc.lon }));
+      return [];
     case 'base':
       return MILITARY_BASES.map(base => ({ id: base.id, name: base.name, lat: base.lat, lon: base.lon }));
     case 'nuclear':
-      return NUCLEAR_FACILITIES.map(site => ({ id: site.id, name: site.name, lat: site.lat, lon: site.lon }));
+      return [];
     default:
       return [];
   }

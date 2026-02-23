@@ -4,7 +4,7 @@ import { escapeHtml } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, Geometry } from 'geojson';
-import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, CableAdvisory, RepairShip, NaturalEvent, CyberThreat } from '@/types';
+import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, NaturalEvent, CyberThreat } from '@/types';
 import type { Earthquake } from '@/services/earthquakes';
 import type { GeoHubActivity } from '@/services/geo-activity';
 import { getNaturalEventIcon } from '@/services/eonet';
@@ -13,12 +13,7 @@ import { getSeverityColor } from '@/services/weather';
 import {
   MAP_URLS,
   INTEL_HOTSPOTS,
-  CONFLICT_ZONES,
   MILITARY_BASES,
-  UNDERSEA_CABLES,
-  NUCLEAR_FACILITIES,
-  SANCTIONED_COUNTRIES,
-  STRATEGIC_WATERWAYS,
   APT_GROUPS,
   ECONOMIC_CENTERS,
 } from '@/config';
@@ -59,8 +54,6 @@ export class MapComponent {
     Record<keyof MapLayers, { minZoom: number; showLabels?: number }>
   > = {
     bases: { minZoom: 3, showLabels: 5 },
-    nuclear: { minZoom: 2 },
-    conflicts: { minZoom: 1, showLabels: 3 },
     economic: { minZoom: 2 },
     natural: { minZoom: 1, showLabels: 2 },
   };
@@ -83,8 +76,6 @@ export class MapComponent {
   private earthquakes: Earthquake[] = [];
   private weatherAlerts: WeatherAlert[] = [];
   private outages: InternetOutage[] = [];
-  private cableAdvisories: CableAdvisory[] = [];
-  private repairShips: RepairShip[] = [];
   private naturalEvents: NaturalEvent[] = [];
   private firmsFireData: Array<{ lat: number; lon: number; brightness: number; frp: number; confidence: number; region: string; acq_date: string; daynight: string }> = [];
   private geoActivities: GeoHubActivity[] = [];
@@ -283,30 +274,24 @@ export class MapComponent {
     toggles.id = 'layerToggles';
 
     const layers: (keyof MapLayers)[] = [
-      'conflicts', 'hotspots', 'sanctions',              // geopolitical
-      'bases', 'nuclear',                                 // military/strategic
-      'cables', 'outages',                                // infrastructure
+      'hotspots',                                         // geopolitical
+      'bases',                                            // military/strategic
+      'outages',                                          // infrastructure
       // cyberThreats is intentionally hidden on SVG/mobile fallback (DeckGL desktop only)
       'natural', 'fires', 'climate', 'weather',           // natural
       'economic',                                         // economic
-      'waterways',                                        // labels
     ];
     const layerLabelKeys: Partial<Record<keyof MapLayers, string>> = {
       hotspots: 'components.deckgl.layers.intelHotspots',
-      conflicts: 'components.deckgl.layers.conflictZones',
       bases: 'components.deckgl.layers.militaryBases',
-      nuclear: 'components.deckgl.layers.nuclearSites',
-      cables: 'components.deckgl.layers.underseaCables',
       outages: 'components.deckgl.layers.internetOutages',
       natural: 'components.deckgl.layers.naturalEvents',
       fires: 'components.deckgl.layers.fires',
       climate: 'components.deckgl.layers.climateAnomalies',
       weather: 'components.deckgl.layers.weatherAlerts',
       economic: 'components.deckgl.layers.economicCenters',
-      waterways: 'components.deckgl.layers.strategicWaterways',
     };
     const getLayerLabel = (layer: keyof MapLayers): string => {
-      if (layer === 'sanctions') return t('components.deckgl.layerHelp.labels.sanctions');
       const key = layerLabelKeys[layer];
       return key ? t(key) : layer;
     };
@@ -367,16 +352,12 @@ export class MapComponent {
           helpItem(staticLabel('timeExtended'), 'timeExtended'),
         ], 'timeAffects')}
         ${helpSection('geopolitical', [
-          helpItem(label('conflictZones'), 'geoConflicts'),
           helpItem(label('intelHotspots'), 'geoHotspots'),
-          helpItem(staticLabel('sanctions'), 'geoSanctions'),
         ])}
         ${helpSection('militaryStrategic', [
           helpItem(label('militaryBases'), 'militaryBases'),
-          helpItem(label('nuclearSites'), 'militaryNuclear'),
         ])}
         ${helpSection('infrastructure', [
-          helpItem(label('underseaCables'), 'infraCablesFull'),
           helpItem(label('internetOutages'), 'infraOutages'),
           helpItem(label('cyberThreats'), 'infraCyberThreats'),
         ])}
@@ -389,7 +370,6 @@ export class MapComponent {
         ])}
         ${helpSection('labels', [
           helpItem(staticLabel('countries'), 'countriesOverlay'),
-          helpItem(label('strategicWaterways'), 'waterwaysLabels'),
         ])}
       </div>
     `;
@@ -758,17 +738,8 @@ export class MapComponent {
     // Setup projection for dynamic elements
     const projection = this.getProjection(width, height);
 
-    // Update country fills (sanctions toggle without rebuilding geometry)
+    // Update country fills
     this.updateCountryFills();
-
-    // Render dynamic map layers
-    if (this.state.layers.cables) {
-      this.renderCables(projection);
-    }
-
-    if (this.state.layers.conflicts) {
-      this.renderConflicts(projection);
-    }
 
     // GPU-accelerated cluster markers (LOD)
     this.renderClusterLayer(projection);
@@ -876,87 +847,13 @@ export class MapComponent {
       .attr('stroke-width', 0.7);
   }
 
-  private renderCables(projection: d3.GeoProjection): void {
-    if (!this.dynamicLayerGroup) return;
-    const cableGroup = this.dynamicLayerGroup.append('g').attr('class', 'cables');
-
-    UNDERSEA_CABLES.forEach((cable) => {
-      const lineGenerator = d3
-        .line<[number, number]>()
-        .x((d) => projection(d)?.[0] ?? 0)
-        .y((d) => projection(d)?.[1] ?? 0)
-        .curve(d3.curveCardinal);
-
-      const isHighlighted = this.highlightedAssets.cable.has(cable.id);
-      const cableAdvisory = this.getCableAdvisory(cable.id);
-      const advisoryClass = cableAdvisory ? `cable-${cableAdvisory.severity}` : '';
-      const highlightClass = isHighlighted ? 'asset-highlight asset-highlight-cable' : '';
-
-      const path = cableGroup
-        .append('path')
-        .attr('class', `cable-path ${advisoryClass} ${highlightClass}`.trim())
-        .attr('d', lineGenerator(cable.points));
-
-      path.append('title').text(cable.name);
-
-      path.on('click', (event: MouseEvent) => {
-        event.stopPropagation();
-        const rect = this.container.getBoundingClientRect();
-        this.popup.show({
-          type: 'cable',
-          data: cable,
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top,
-        });
-      });
-    });
-  }
-
-  private renderConflicts(projection: d3.GeoProjection): void {
-    if (!this.dynamicLayerGroup) return;
-    const conflictGroup = this.dynamicLayerGroup.append('g').attr('class', 'conflicts');
-
-    CONFLICT_ZONES.forEach((zone) => {
-      const points = zone.coords
-        .map((c) => projection(c as [number, number]))
-        .filter((p): p is [number, number] => p !== null);
-
-      if (points.length > 0) {
-        conflictGroup
-          .append('polygon')
-          .attr('class', 'conflict-zone')
-          .attr('points', points.map((p) => p.join(',')).join(' '));
-        // Labels are now rendered as HTML overlays in renderConflictLabels()
-      }
-    });
-  }
-
-
   private updateCountryFills(): void {
     if (!this.baseLayerGroup || !this.countryFeatures) return;
 
-    const sanctionColors: Record<string, string> = {
-      severe: 'rgba(255, 0, 0, 0.35)',
-      high: 'rgba(255, 100, 0, 0.25)',
-      moderate: 'rgba(255, 200, 0, 0.2)',
-    };
     const defaultFill = getCSSColor('--map-country');
-    const useSanctions = this.state.layers.sanctions;
 
-    this.baseLayerGroup.selectAll('.country').each(function (datum) {
+    this.baseLayerGroup.selectAll('.country').each(function () {
       const el = d3.select(this);
-      const id = datum as { id?: number };
-      if (!useSanctions) {
-        el.attr('fill', defaultFill);
-        return;
-      }
-      if (id?.id !== undefined && SANCTIONED_COUNTRIES[id.id]) {
-        const level = SANCTIONED_COUNTRIES[id.id];
-        if (level) {
-          el.attr('fill', sanctionColors[level] || defaultFill);
-          return;
-        }
-      }
       el.attr('fill', defaultFill);
     });
   }
@@ -965,70 +862,8 @@ export class MapComponent {
   private renderOverlays(projection: d3.GeoProjection): void {
     this.overlays.innerHTML = '';
 
-    // Strategic waterways
-    if (this.state.layers.waterways) {
-      this.renderWaterways(projection);
-    }
-
     // APT groups
     this.renderAPTMarkers(projection);
-
-    // Nuclear facilities (always HTML - shapes convey status)
-    if (this.state.layers.nuclear) {
-      NUCLEAR_FACILITIES.forEach((facility) => {
-        const pos = projection([facility.lon, facility.lat]);
-        if (!pos) return;
-
-        const div = document.createElement('div');
-        const isHighlighted = this.highlightedAssets.nuclear.has(facility.id);
-        div.className = `nuclear-marker ${facility.status}${isHighlighted ? ' asset-highlight asset-highlight-nuclear' : ''}`;
-        div.style.left = `${pos[0]}px`;
-        div.style.top = `${pos[1]}px`;
-        div.title = `${facility.name} (${facility.type})`;
-
-        div.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const rect = this.container.getBoundingClientRect();
-          this.popup.show({
-            type: 'nuclear',
-            data: facility,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          });
-        });
-
-        this.overlays.appendChild(div);
-      });
-    }
-
-    // Conflict zone click areas
-    if (this.state.layers.conflicts) {
-      CONFLICT_ZONES.forEach((zone) => {
-        const centerPos = projection(zone.center as [number, number]);
-        if (!centerPos) return;
-
-        const clickArea = document.createElement('div');
-        clickArea.className = 'conflict-click-area';
-        clickArea.style.left = `${centerPos[0] - 40}px`;
-        clickArea.style.top = `${centerPos[1] - 20}px`;
-        clickArea.style.width = '80px';
-        clickArea.style.height = '40px';
-        clickArea.style.cursor = 'pointer';
-
-        clickArea.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const rect = this.container.getBoundingClientRect();
-          this.popup.show({
-            type: 'conflict',
-            data: zone,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          });
-        });
-
-        this.overlays.appendChild(clickArea);
-      });
-    }
 
     // Hotspots (always HTML - level colors and BREAKING badges)
     if (this.state.layers.hotspots) {
@@ -1243,75 +1078,6 @@ export class MapComponent {
       });
     }
 
-    // Cable advisories & repair ships
-    if (this.state.layers.cables) {
-      this.cableAdvisories.forEach((advisory) => {
-        const pos = projection([advisory.lon, advisory.lat]);
-        if (!pos) return;
-
-        const div = document.createElement('div');
-        div.className = `cable-advisory-marker ${advisory.severity}`;
-        div.style.left = `${pos[0]}px`;
-        div.style.top = `${pos[1]}px`;
-
-        const icon = document.createElement('div');
-        icon.className = 'cable-advisory-icon';
-        icon.textContent = advisory.severity === 'fault' ? '⚡' : '⚠';
-        div.appendChild(icon);
-
-        const label = document.createElement('div');
-        label.className = 'cable-advisory-label';
-        label.textContent = this.getCableName(advisory.cableId);
-        div.appendChild(label);
-
-        div.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const rect = this.container.getBoundingClientRect();
-          this.popup.show({
-            type: 'cable-advisory',
-            data: advisory,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          });
-        });
-
-        this.overlays.appendChild(div);
-      });
-
-      this.repairShips.forEach((ship) => {
-        const pos = projection([ship.lon, ship.lat]);
-        if (!pos) return;
-
-        const div = document.createElement('div');
-        div.className = `repair-ship-marker ${ship.status}`;
-        div.style.left = `${pos[0]}px`;
-        div.style.top = `${pos[1]}px`;
-
-        const icon = document.createElement('div');
-        icon.className = 'repair-ship-icon';
-        icon.textContent = '🚢';
-        div.appendChild(icon);
-
-        const label = document.createElement('div');
-        label.className = 'repair-ship-label';
-        label.textContent = ship.name;
-        div.appendChild(label);
-
-        div.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const rect = this.container.getBoundingClientRect();
-          this.popup.show({
-            type: 'repair-ship',
-            data: ship,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          });
-        });
-
-        this.overlays.appendChild(div);
-      });
-    }
-
     // Natural Events (NASA EONET) - part of NATURAL layer
     if (this.state.layers.natural) {
       this.naturalEvents.forEach((event) => {
@@ -1403,36 +1169,6 @@ export class MapComponent {
         this.overlays.appendChild(div);
       });
     }
-  }
-
-  private renderWaterways(projection: d3.GeoProjection): void {
-    STRATEGIC_WATERWAYS.forEach((waterway) => {
-      const pos = projection([waterway.lon, waterway.lat]);
-      if (!pos) return;
-
-      const div = document.createElement('div');
-      div.className = 'waterway-marker';
-      div.style.left = `${pos[0]}px`;
-      div.style.top = `${pos[1]}px`;
-      div.title = waterway.name;
-
-      const diamond = document.createElement('div');
-      diamond.className = 'waterway-diamond';
-      div.appendChild(diamond);
-
-      div.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const rect = this.container.getBoundingClientRect();
-        this.popup.show({
-          type: 'waterway',
-          data: waterway,
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        });
-      });
-
-      this.overlays.appendChild(div);
-    });
   }
 
   private renderAPTMarkers(projection: d3.GeoProjection): void {
@@ -1728,24 +1464,6 @@ export class MapComponent {
     this.onHotspotClick?.(hotspot);
   }
 
-  public triggerConflictClick(id: string): void {
-    const conflict = CONFLICT_ZONES.find(c => c.id === id);
-    if (!conflict) return;
-
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
-    const projection = this.getProjection(width, height);
-    const pos = projection(conflict.center as [number, number]);
-    if (!pos) return;
-
-    this.popup.show({
-      type: 'conflict',
-      data: conflict,
-      x: pos[0],
-      y: pos[1],
-    });
-  }
-
   public triggerBaseClick(id: string): void {
     const base = MILITARY_BASES.find(b => b.id === id);
     if (!base) return;
@@ -1759,43 +1477,6 @@ export class MapComponent {
     this.popup.show({
       type: 'base',
       data: base,
-      x: pos[0],
-      y: pos[1],
-    });
-  }
-
-  public triggerCableClick(id: string): void {
-    const cable = UNDERSEA_CABLES.find(c => c.id === id);
-    if (!cable || cable.points.length === 0) return;
-
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
-    const projection = this.getProjection(width, height);
-    const midPoint = cable.points[Math.floor(cable.points.length / 2)] as [number, number];
-    const pos = projection(midPoint);
-    if (!pos) return;
-
-    this.popup.show({
-      type: 'cable',
-      data: cable,
-      x: pos[0],
-      y: pos[1],
-    });
-  }
-
-  public triggerNuclearClick(id: string): void {
-    const facility = NUCLEAR_FACILITIES.find(n => n.id === id);
-    if (!facility) return;
-
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
-    const projection = this.getProjection(width, height);
-    const pos = projection([facility.lon, facility.lat]);
-    if (!pos) return;
-
-    this.popup.show({
-      type: 'nuclear',
-      data: facility,
       x: pos[0],
       y: pos[1],
     });
@@ -2074,13 +1755,6 @@ export class MapComponent {
     this.render();
   }
 
-  public setCableActivity(advisories: CableAdvisory[], repairShips: RepairShip[]): void {
-    this.cableAdvisories = advisories;
-    this.repairShips = repairShips;
-    this.popup.setCableActivity(advisories, repairShips);
-    this.render();
-  }
-
   public setNaturalEvents(events: NaturalEvent[]): void {
     this.naturalEvents = events;
     this.render();
@@ -2107,18 +1781,6 @@ export class MapComponent {
 
   public setOnGeoHubClick(handler: (hub: GeoHubActivity) => void): void {
     this.onGeoHubClick = handler;
-  }
-
-  private getCableAdvisory(cableId: string): CableAdvisory | undefined {
-    const advisories = this.cableAdvisories.filter((advisory) => advisory.cableId === cableId);
-    return advisories.reduce<CableAdvisory | undefined>((latest, advisory) => {
-      if (!latest) return advisory;
-      return advisory.reported.getTime() > latest.reported.getTime() ? advisory : latest;
-    }, undefined);
-  }
-
-  private getCableName(cableId: string): string {
-    return UNDERSEA_CABLES.find((cable) => cable.id === cableId)?.name || cableId;
   }
 
   public getHotspotLevels(): Record<string, string> {

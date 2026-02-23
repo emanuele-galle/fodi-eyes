@@ -414,14 +414,6 @@ export interface NuclearFacility {
   operator?: string;  // Operating country
 }
 
-export interface GammaIrradiator {
-  id: string;
-  city: string;
-  country: string;
-  lat: number;
-  lon: number;
-  organization?: string;
-}
 
 export type PipelineType = 'oil' | 'gas' | 'products';
 export type PipelineStatus = 'operating' | 'construction';
@@ -480,38 +472,19 @@ export interface PanelConfig {
 }
 
 export interface MapLayers {
-  conflicts: boolean;
   bases: boolean;
-  cables: boolean;
   hotspots: boolean;
-  nuclear: boolean;
-  sanctions: boolean;
   weather: boolean;
   economic: boolean;
-  waterways: boolean;
   outages: boolean;
   cyberThreats: boolean;
   natural: boolean;
   fires: boolean;
   climate: boolean;
   italyBoundaries: boolean;
+  webcams: boolean;
 }
 
-export interface AIDataCenter {
-  id: string;
-  name: string;
-  owner: string;
-  country: string;
-  lat: number;
-  lon: number;
-  status: 'existing' | 'planned' | 'decommissioned';
-  chipType: string;
-  chipCount: number;
-  powerMW?: number;
-  h100Equivalent?: number;
-  sector?: string;
-  note?: string;
-}
 
 export interface InternetOutage {
   id: string;
@@ -1234,18 +1207,3 @@ export interface MapTechEventCluster {
   sampled?: boolean;
 }
 
-export interface MapDatacenterCluster {
-  id: string;
-  lat: number;
-  lon: number;
-  count: number;
-  items: AIDataCenter[];
-  region: string;
-  country: string;
-  totalChips: number;
-  totalPowerMW: number;
-  majorityExisting: boolean;
-  existingCount?: number;
-  plannedCount?: number;
-  sampled?: boolean;
-}

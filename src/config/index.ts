@@ -16,8 +16,6 @@ export { SECTORS, COMMODITIES, MARKET_SYMBOLS, CRYPTO_MAP } from './markets';
 // Geo data
 export { UNDERSEA_CABLES, MAP_URLS } from './geo';
 
-// AI Datacenters
-export { AI_DATA_CENTERS } from './ai-datacenters';
 
 // Feeds configuration
 export {
@@ -49,9 +47,7 @@ export {
 // Geo exports
 export {
   INTEL_HOTSPOTS,
-  CONFLICT_ZONES,
   MILITARY_BASES,
-  NUCLEAR_FACILITIES,
   APT_GROUPS,
   STRATEGIC_WATERWAYS,
   ECONOMIC_CENTERS,
@@ -62,7 +58,6 @@ export {
 export { AI_REGULATIONS, COUNTRY_REGULATION_PROFILES, getRegulationById, getRegulationsByCountry, getUpcomingDeadlines, getRecentActions } from './ai-regulations';
 
 // Infrastructure data (kept for reference/future use)
-export { GAMMA_IRRADIATORS } from './irradiators';
 export { PIPELINES, PIPELINE_COLORS } from './pipelines';
 export { PORTS } from './ports';
 export { MONITORED_AIRPORTS, FAA_AIRPORTS } from './airports';

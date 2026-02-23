@@ -2,8 +2,6 @@ import type { NewsItem, Monitor, PanelConfig, MapLayers, RelatedAsset, InternetO
 import {
   FEEDS,
   INTEL_SOURCES,
-  SECTORS,
-  COMMODITIES,
   MARKET_SYMBOLS,
   REFRESH_INTERVALS,
   DEFAULT_PANELS,
@@ -13,37 +11,27 @@ import {
   LAYER_TO_SOURCE,
 } from '@/config';
 import { BETA_MODE } from '@/config/beta';
-import { fetchCategoryFeeds, getFeedFailures, fetchMultipleStocks, fetchCrypto, fetchPredictions, fetchEarthquakes, fetchWeatherAlerts, fetchFredData, fetchInternetOutages, isOutagesConfigured, initDB, updateBaseline, calculateDeviation, addToSignalHistory, saveSnapshot, cleanOldSnapshots, analysisWorker, fetchPizzIntStatus, fetchGdeltTensions, fetchNaturalEvents, fetchOilAnalytics, fetchCyberThreats, drainTrendingSignals } from '@/services';
-import { fetchCountryMarkets } from '@/services/prediction';
+import { fetchCategoryFeeds, getFeedFailures, fetchMultipleStocks, fetchEarthquakes, fetchWeatherAlerts, fetchFredData, fetchInternetOutages, isOutagesConfigured, initDB, updateBaseline, calculateDeviation, saveSnapshot, cleanOldSnapshots, analysisWorker, fetchPizzIntStatus, fetchGdeltTensions, fetchNaturalEvents, fetchOilAnalytics, fetchCyberThreats } from '@/services';
 import { mlWorker } from '@/services/ml-worker';
 import { clusterNewsHybrid } from '@/services/clustering';
-import { ingestEarthquakes, detectGeoConvergence, geoConvergenceToSignal } from '@/services/geo-convergence';
+import { ingestEarthquakes } from '@/services/geo-convergence';
 import { signalAggregator } from '@/services/signal-aggregator';
 import { updateAndCheck } from '@/services/temporal-baseline';
 import { fetchAllFires, flattenFires, computeRegionStats, toMapFires } from '@/services/wildfires';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
-import { ingestNewsForCII, ingestOutagesForCII, ingestClimateForCII, startLearning, isInLearningMode, calculateCII, getCountryData, TIER1_COUNTRIES } from '@/services/country-instability';
+import { ingestOutagesForCII, ingestClimateForCII, startLearning, calculateCII, getCountryData, TIER1_COUNTRIES } from '@/services/country-instability';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import { fetchItalyRegions } from '@/services/ondata';
 import { fetchClimateAnomalies } from '@/services/climate';
 import { buildMapUrl, debounce, loadFromStorage, parseMapUrlState, saveToStorage, ExportPanel, getCircuitBreakerCooldownInfo, isMobileDevice, setTheme, getCurrentTheme } from '@/utils';
-import { reverseGeocode } from '@/utils/reverse-geocode';
-import { CountryBriefPage } from '@/components/CountryBriefPage';
-// import { maybeShowDownloadBanner } from '@/components/DownloadBanner';
-// import { mountCommunityWidget } from '@/components/CommunityWidget';
-import { CountryTimeline, type TimelineEvent } from '@/components/CountryTimeline';
+// CountryBriefPage and CountryTimeline removed — map-centered layout
 import { escapeHtml } from '@/utils/sanitize';
 import type { ParsedMapUrlState } from '@/utils';
 import {
   MapContainer,
-  type MapView,
   type TimeRange,
   NewsPanel,
   MarketPanel,
-  HeatmapPanel,
-  CommoditiesPanel,
-  CryptoPanel,
-  PredictionPanel,
   MonitorPanel,
   Panel,
   SignalModal,
@@ -54,7 +42,8 @@ import {
   MobileWarningModal,
   PizzIntIndicator,
   LiveNewsPanel,
-  LiveWebcamsPanel,
+  Sidebar,
+  TerritorialWebcamsPanel,
   IntelligenceGapBadge,
   ServiceStatusPanel,
   RuntimeConfigPanel,
@@ -69,17 +58,13 @@ import {
 } from '@/components';
 import type { SearchResult } from '@/components/SearchModal';
 import { collectStoryData } from '@/services/story-data';
-import { renderStoryToCanvas } from '@/services/story-renderer';
 import { openStoryModal } from '@/components/StoryModal';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES, MILITARY_BASES, UNDERSEA_CABLES, NUCLEAR_FACILITIES } from '@/config/geo';
-import { MarketServiceClient } from '@/generated/client/worldmonitor/market/v1/service_client';
-import { AI_DATA_CENTERS } from '@/config/ai-datacenters';
+import { INTEL_HOTSPOTS, MILITARY_BASES, UNDERSEA_CABLES } from '@/config/geo';
 import { isDesktopRuntime } from '@/services/runtime';
-import { IntelligenceServiceClient } from '@/generated/client/worldmonitor/intelligence/v1/service_client';
 import { isFeatureAvailable } from '@/services/runtime-config';
-import { trackEvent, trackPanelView, trackThemeChanged, trackMapViewChange, trackMapLayerToggle, trackCountrySelected, trackCountryBriefOpened, trackSearchResultSelected, trackPanelToggled, trackUpdateShown, trackUpdateClicked, trackUpdateDismissed, trackDeeplinkOpened } from '@/services/analytics';
+import { trackEvent, trackThemeChanged, trackMapLayerToggle, trackCountrySelected, trackSearchResultSelected, trackPanelToggled, trackUpdateShown, trackUpdateClicked, trackUpdateDismissed, trackDeeplinkOpened } from '@/services/analytics';
 import { invokeTauri } from '@/services/tauri-bridge';
-import { getCountryAtCoordinates, hasCountryGeometry, isCoordinateInCountry, preloadCountryGeometry } from '@/services/country-geometry';
+import { hasCountryGeometry, isCoordinateInCountry, preloadCountryGeometry } from '@/services/country-geometry';
 import { initI18n, t, changeLanguage } from '@/services/i18n';
 
 import type { MarketData, ClusteredEvent } from '@/types';
@@ -141,7 +126,6 @@ export class App {
   private initialUrlState: ParsedMapUrlState | null = null;
   private inFlight: Set<string> = new Set();
   private isMobile: boolean;
-  private seenGeoAlerts: Set<string> = new Set();
   private snapshotIntervalId: ReturnType<typeof setInterval> | null = null;
   private refreshTimeoutIds: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private isDestroyed = false;
@@ -157,11 +141,9 @@ export class App {
   private mapFlashCache: Map<string, number> = new Map();
   private readonly MAP_FLASH_COOLDOWN_MS = 10 * 60 * 1000;
   private initialLoadComplete = false;
-  private countryBriefPage: CountryBriefPage | null = null;
-  private countryTimeline: CountryTimeline | null = null;
+  // countryBriefPage and countryTimeline removed — map-centered layout
   private findingsBadge: IntelligenceGapBadge | null = null;
   private pendingDeepLinkCountry: string | null = null;
-  private briefRequestToken = 0;
   private readonly isDesktopApp = isDesktopRuntime();
   private readonly UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
   private updateCheckIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -238,12 +220,10 @@ export class App {
     if (!this.isMobile) {
       this.findingsBadge = new IntelligenceGapBadge();
       this.findingsBadge.setOnSignalClick((signal) => {
-        if (this.countryBriefPage?.isVisible()) return;
         if (localStorage.getItem('wm-settings-open') === '1') return;
         this.signalModal?.showSignal(signal);
       });
       this.findingsBadge.setOnAlertClick((alert) => {
-        if (this.countryBriefPage?.isVisible()) return;
         if (localStorage.getItem('wm-settings-open') === '1') return;
         this.signalModal?.showAlert(alert);
       });
@@ -364,27 +344,8 @@ export class App {
   }
 
   private setupPanelViewTracking(): void {
-    const viewedPanels = new Set<string>();
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.3) {
-          const id = (entry.target as HTMLElement).dataset.panel;
-          if (id && !viewedPanels.has(id)) {
-            viewedPanels.add(id);
-            trackPanelView(id);
-          }
-        }
-      }
-    }, { threshold: 0.3 });
-
-    const grid = document.getElementById('panelsGrid');
-    if (grid) {
-      for (const child of Array.from(grid.children)) {
-        if ((child as HTMLElement).dataset.panel) {
-          observer.observe(child);
-        }
-      }
-    }
+    // panelsGrid removed — sidebar layout
+    return;
   }
 
   private setupUpdateChecks(): void {
@@ -669,280 +630,18 @@ export class App {
   }
 
   private setupCountryIntel(): void {
-    if (!this.map) return;
-    this.countryBriefPage = new CountryBriefPage();
-    this.countryBriefPage.setShareStoryHandler((code, name) => {
-      this.countryBriefPage?.hide();
-      this.openCountryStory(code, name);
-    });
-    this.countryBriefPage.setExportImageHandler(async (code, name) => {
-      try {
-        const signals = this.getCountrySignals(code, name);
-        const cluster = signalAggregator.getCountryClusters().find(c => c.country === code);
-        const regional = signalAggregator.getRegionalConvergence().filter(r => r.countries.includes(code));
-        const convergence = cluster ? {
-          score: cluster.convergenceScore,
-          signalTypes: [...cluster.signalTypes],
-          regionalDescriptions: regional.map(r => r.description),
-        } : null;
-        const postures: import('@/services/cached-theater-posture').TheaterPostureSummary[] = [];
-        const data = collectStoryData(code, name, this.latestClusters, postures, this.latestPredictions, signals, convergence);
-        const canvas = await renderStoryToCanvas(data);
-        const dataUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `country-brief-${code.toLowerCase()}-${Date.now()}.png`;
-        a.click();
-      } catch (err) {
-        console.error('[CountryBrief] Image export failed:', err);
-      }
-    });
-
-    this.map.onCountryClicked(async (countryClick) => {
-      if (countryClick.code && countryClick.name) {
-        trackCountrySelected(countryClick.code, countryClick.name, 'map');
-        this.openCountryBriefByCode(countryClick.code, countryClick.name);
-      } else {
-        this.openCountryBrief(countryClick.lat, countryClick.lon);
-      }
-    });
-
-    this.countryBriefPage.onClose(() => {
-      this.briefRequestToken++; // invalidate any in-flight reverse-geocode
-      this.map?.clearCountryHighlight();
-      this.map?.setRenderPaused(false);
-      this.countryTimeline?.destroy();
-      this.countryTimeline = null;
-      // Force URL rewrite to drop ?country= immediately
-      const shareUrl = this.getShareUrl();
-      if (shareUrl) history.replaceState(null, '', shareUrl);
-    });
+    // CountryBriefPage removed — map-centered layout
+    return;
   }
 
-  public async openCountryBrief(lat: number, lon: number): Promise<void> {
-    if (!this.countryBriefPage) return;
-    const token = ++this.briefRequestToken;
-    this.countryBriefPage.showLoading();
-    this.map?.setRenderPaused(true);
-
-    const localGeo = getCountryAtCoordinates(lat, lon);
-    if (localGeo) {
-      if (token !== this.briefRequestToken) return; // superseded by newer click
-      this.openCountryBriefByCode(localGeo.code, localGeo.name);
-      return;
-    }
-
-    const geo = await reverseGeocode(lat, lon);
-    if (token !== this.briefRequestToken) return; // superseded by newer click
-    if (!geo) {
-      this.countryBriefPage.hide();
-      this.map?.setRenderPaused(false);
-      return;
-    }
-
-    this.openCountryBriefByCode(geo.code, geo.country);
+  public async openCountryBrief(_lat: number, _lon: number): Promise<void> {
+    // CountryBriefPage removed — map-centered layout
+    return;
   }
 
-  public async openCountryBriefByCode(code: string, country: string): Promise<void> {
-    if (!this.countryBriefPage) return;
-    this.map?.setRenderPaused(true);
-    trackCountryBriefOpened(code);
-
-    // Normalize to canonical name (GeoJSON may use "United States of America" etc.)
-    const canonicalName = TIER1_COUNTRIES[code] || App.resolveCountryName(code);
-    if (canonicalName !== code) country = canonicalName;
-
-    const scores = calculateCII();
-    const score = scores.find((s) => s.code === code) ?? null;
-    const signals = this.getCountrySignals(code, country);
-
-    this.countryBriefPage.show(country, code, score, signals);
-    this.map?.highlightCountry(code);
-
-    // Force URL to include ?country= immediately
-    const shareUrl = this.getShareUrl();
-    if (shareUrl) history.replaceState(null, '', shareUrl);
-
-    const marketClient = new MarketServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
-    const stockPromise = marketClient.getCountryStockIndex({ countryCode: code })
-      .then((resp) => ({
-        available: resp.available,
-        code: resp.code,
-        symbol: resp.symbol,
-        indexName: resp.indexName,
-        price: String(resp.price),
-        weekChangePercent: String(resp.weekChangePercent),
-        currency: resp.currency,
-      }))
-      .catch(() => ({ available: false as const, code: '', symbol: '', indexName: '', price: '0', weekChangePercent: '0', currency: '' }));
-
-    stockPromise.then((stock) => {
-      if (this.countryBriefPage?.getCode() === code) this.countryBriefPage.updateStock(stock);
-    });
-
-    fetchCountryMarkets(country)
-      .then((markets) => {
-        if (this.countryBriefPage?.getCode() === code) this.countryBriefPage.updateMarkets(markets);
-      })
-      .catch(() => {
-        if (this.countryBriefPage?.getCode() === code) this.countryBriefPage.updateMarkets([]);
-      });
-
-    // Pass evidence headlines
-    const searchTerms = App.getCountrySearchTerms(country, code);
-    const otherCountryTerms = App.getOtherCountryTerms(code);
-    const matchingNews = this.allNews.filter((n) => {
-      const t = n.title.toLowerCase();
-      return searchTerms.some((term) => t.includes(term));
-    });
-    const filteredNews = matchingNews.filter((n) => {
-      const t = n.title.toLowerCase();
-      const ourPos = App.firstMentionPosition(t, searchTerms);
-      const otherPos = App.firstMentionPosition(t, otherCountryTerms);
-      return ourPos !== Infinity && (otherPos === Infinity || ourPos <= otherPos);
-    });
-    if (filteredNews.length > 0) {
-      this.countryBriefPage.updateNews(filteredNews.slice(0, 8));
-    }
-
-    // Infrastructure exposure
-    this.countryBriefPage.updateInfrastructure(code);
-
-    // Timeline
-    this.mountCountryTimeline(code, country);
-
-    try {
-      const context: Record<string, unknown> = {};
-      if (score) {
-        context.score = score.score;
-        context.level = score.level;
-        context.trend = score.trend;
-        context.components = score.components;
-        context.change24h = score.change24h;
-      }
-      Object.assign(context, signals);
-
-      const countryCluster = signalAggregator.getCountryClusters().find((c) => c.country === code);
-      if (countryCluster) {
-        context.convergenceScore = countryCluster.convergenceScore;
-        context.signalTypes = [...countryCluster.signalTypes];
-      }
-
-      const convergences = signalAggregator.getRegionalConvergence()
-        .filter((r) => r.countries.includes(code));
-      if (convergences.length) {
-        context.regionalConvergence = convergences.map((r) => r.description);
-      }
-
-      const headlines = filteredNews.slice(0, 15).map((n) => n.title);
-      if (headlines.length) context.headlines = headlines;
-
-      const stockData = await stockPromise;
-      if (stockData.available) {
-        const pct = parseFloat(stockData.weekChangePercent);
-        context.stockIndex = `${stockData.indexName}: ${stockData.price} (${pct >= 0 ? '+' : ''}${stockData.weekChangePercent}% week)`;
-      }
-
-      let briefText = '';
-      try {
-        const intelClient = new IntelligenceServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
-        const resp = await intelClient.getCountryIntelBrief({ countryCode: code });
-        briefText = resp.brief;
-      } catch { /* server unreachable */ }
-
-      if (briefText) {
-        this.countryBriefPage!.updateBrief({ brief: briefText, country, code });
-      } else {
-        const briefHeadlines = (context.headlines as string[] | undefined) || [];
-        let fallbackBrief = '';
-        const sumModelId = BETA_MODE ? 'summarization-beta' : 'summarization';
-        if (briefHeadlines.length >= 2 && mlWorker.isAvailable && mlWorker.isModelLoaded(sumModelId)) {
-          try {
-            const prompt = `Summarize the current situation in ${country} based on these headlines: ${briefHeadlines.slice(0, 8).join('. ')}`;
-            const [summary] = await mlWorker.summarize([prompt], BETA_MODE ? 'summarization-beta' : undefined);
-            if (summary && summary.length > 20) fallbackBrief = summary;
-          } catch { /* T5 failed */ }
-        }
-
-        if (fallbackBrief) {
-          this.countryBriefPage!.updateBrief({ brief: fallbackBrief, country, code, fallback: true });
-        } else {
-          const lines: string[] = [];
-          if (score) lines.push(t('countryBrief.fallback.instabilityIndex', { score: String(score.score), level: t(`countryBrief.levels.${score.level}`), trend: t(`countryBrief.trends.${score.trend}`) }));
-          if (signals.protests > 0) lines.push(t('countryBrief.fallback.protestsDetected', { count: String(signals.protests) }));
-          if (signals.outages > 0) lines.push(t('countryBrief.fallback.internetOutages', { count: String(signals.outages) }));
-          if (signals.earthquakes > 0) lines.push(t('countryBrief.fallback.recentEarthquakes', { count: String(signals.earthquakes) }));
-          if (context.stockIndex) lines.push(t('countryBrief.fallback.stockIndex', { value: context.stockIndex }));
-          if (briefHeadlines.length > 0) {
-            lines.push('', t('countryBrief.fallback.recentHeadlines'));
-            briefHeadlines.slice(0, 5).forEach(h => lines.push(`• ${h}`));
-          }
-          if (lines.length > 0) {
-            this.countryBriefPage!.updateBrief({ brief: lines.join('\n'), country, code, fallback: true });
-          } else {
-            this.countryBriefPage!.updateBrief({ brief: '', country, code, error: 'No AI service available. Configure GROQ_API_KEY in Settings for full briefs.' });
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[CountryBrief] fetch error:', err);
-      this.countryBriefPage!.updateBrief({ brief: '', country, code, error: 'Failed to generate brief' });
-    }
-  }
-
-  private mountCountryTimeline(code: string, country: string): void {
-    this.countryTimeline?.destroy();
-    this.countryTimeline = null;
-
-    const mount = this.countryBriefPage?.getTimelineMount();
-    if (!mount) return;
-
-    const events: TimelineEvent[] = [];
-    const countryLower = country.toLowerCase();
-    const hasGeoShape = hasCountryGeometry(code) || !!App.COUNTRY_BOUNDS[code];
-    const inCountry = (lat: number, lon: number) => hasGeoShape && this.isInCountry(lat, lon, code);
-    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-    if (this.intelligenceCache.protests?.events) {
-      for (const e of this.intelligenceCache.protests.events) {
-        if (e.country?.toLowerCase() === countryLower || inCountry(e.lat, e.lon)) {
-          events.push({
-            timestamp: new Date(e.time).getTime(),
-            lane: 'protest',
-            label: e.title || `${e.eventType} in ${e.city || e.country}`,
-            severity: e.severity === 'high' ? 'high' : e.severity === 'medium' ? 'medium' : 'low',
-          });
-        }
-      }
-    }
-
-    if (this.intelligenceCache.earthquakes) {
-      for (const eq of this.intelligenceCache.earthquakes) {
-        if (inCountry(eq.location?.latitude ?? 0, eq.location?.longitude ?? 0) || eq.place?.toLowerCase().includes(countryLower)) {
-          events.push({
-            timestamp: eq.occurredAt,
-            lane: 'natural',
-            label: `M${eq.magnitude.toFixed(1)} ${eq.place}`,
-            severity: eq.magnitude >= 6 ? 'critical' : eq.magnitude >= 5 ? 'high' : eq.magnitude >= 4 ? 'medium' : 'low',
-          });
-        }
-      }
-    }
-
-    const ciiData = getCountryData(code);
-    if (ciiData?.conflicts) {
-      for (const c of ciiData.conflicts) {
-        events.push({
-          timestamp: new Date(c.date).getTime(),
-          lane: 'conflict',
-          label: `${c.eventType}: ${c.location || c.country}`,
-          severity: c.fatalities > 0 ? 'critical' : 'high',
-        });
-      }
-    }
-
-    this.countryTimeline = new CountryTimeline(mount);
-    this.countryTimeline.render(events.filter(e => e.timestamp >= sevenDaysAgo));
+  public async openCountryBriefByCode(_code: string, _country: string): Promise<void> {
+    // CountryBriefPage removed — map-centered layout
+    return;
   }
 
   private static COUNTRY_BOUNDS: Record<string, { n: number; s: number; e: number; w: number }> = {
@@ -963,60 +662,6 @@ export class App {
     BR: { n: 5.3, s: -33.8, e: -34.8, w: -73.9 },
   };
 
-  private static COUNTRY_ALIASES: Record<string, string[]> = {
-    IL: ['israel', 'israeli', 'gaza', 'hamas', 'hezbollah', 'netanyahu', 'idf', 'west bank', 'tel aviv', 'jerusalem'],
-    IR: ['iran', 'iranian', 'tehran', 'persian', 'irgc', 'khamenei'],
-    RU: ['russia', 'russian', 'moscow', 'kremlin', 'putin', 'ukraine war'],
-    UA: ['ukraine', 'ukrainian', 'kyiv', 'zelensky', 'zelenskyy'],
-    CN: ['china', 'chinese', 'beijing', 'taiwan strait', 'south china sea', 'xi jinping'],
-    TW: ['taiwan', 'taiwanese', 'taipei'],
-    KP: ['north korea', 'pyongyang', 'kim jong'],
-    KR: ['south korea', 'seoul'],
-    SA: ['saudi', 'riyadh', 'mbs'],
-    SY: ['syria', 'syrian', 'damascus', 'assad'],
-    YE: ['yemen', 'houthi', 'sanaa'],
-    IQ: ['iraq', 'iraqi', 'baghdad'],
-    AF: ['afghanistan', 'afghan', 'kabul', 'taliban'],
-    PK: ['pakistan', 'pakistani', 'islamabad'],
-    IN: ['india', 'indian', 'new delhi', 'modi'],
-    EG: ['egypt', 'egyptian', 'cairo', 'suez'],
-    LB: ['lebanon', 'lebanese', 'beirut'],
-    TR: ['turkey', 'turkish', 'ankara', 'erdogan', 'türkiye'],
-    US: ['united states', 'american', 'washington', 'pentagon', 'white house'],
-    GB: ['united kingdom', 'british', 'london', 'uk '],
-    BR: ['brazil', 'brazilian', 'brasilia', 'lula', 'bolsonaro'],
-    AE: ['united arab emirates', 'uae', 'emirati', 'dubai', 'abu dhabi'],
-  };
-
-  private static otherCountryTermsCache: Map<string, string[]> = new Map();
-
-  private static firstMentionPosition(text: string, terms: string[]): number {
-    let earliest = Infinity;
-    for (const term of terms) {
-      const idx = text.indexOf(term);
-      if (idx !== -1 && idx < earliest) earliest = idx;
-    }
-    return earliest;
-  }
-
-  private static getOtherCountryTerms(code: string): string[] {
-    const cached = App.otherCountryTermsCache.get(code);
-    if (cached) return cached;
-
-    const dedup = new Set<string>();
-    Object.entries(App.COUNTRY_ALIASES).forEach(([countryCode, aliases]) => {
-      if (countryCode === code) return;
-      aliases.forEach((alias) => {
-        const normalized = alias.toLowerCase();
-        if (normalized.trim().length > 0) dedup.add(normalized);
-      });
-    });
-
-    const terms = [...dedup];
-    App.otherCountryTermsCache.set(code, terms);
-    return terms;
-  }
-
   private static resolveCountryName(code: string): string {
     if (TIER1_COUNTRIES[code]) return TIER1_COUNTRIES[code];
 
@@ -1031,13 +676,6 @@ export class App {
     }
 
     return code;
-  }
-
-  private static getCountrySearchTerms(country: string, code: string): string[] {
-    const aliases = App.COUNTRY_ALIASES[code];
-    if (aliases) return aliases;
-    if (/^[A-Z]{2}$/i.test(country.trim())) return [];
-    return [country.toLowerCase()];
   }
 
   private isInCountry(lat: number, lon: number, code: string): boolean {
@@ -1118,10 +756,6 @@ export class App {
     setTimeout(() => { el.classList.remove('visible'); setTimeout(() => el.remove(), 300); }, 3000);
   }
 
-  private shouldShowIntelligenceNotifications(): boolean {
-    return !this.isMobile && !!this.findingsBadge?.isEnabled() && !!this.findingsBadge?.isPopupEnabled();
-  }
-
   private setupSearchModal(): void {
     const searchOptions = {
       placeholder: t('modals.search.placeholder'),
@@ -1137,13 +771,6 @@ export class App {
       data: h,
     })));
 
-    this.searchModal.registerSource('conflict', CONFLICT_ZONES.map(c => ({
-      id: c.id,
-      title: c.name,
-      subtitle: `${c.parties?.join(' ') || ''} ${c.keywords?.join(' ') || ''} ${c.description || ''}`.trim(),
-      data: c,
-    })));
-
     this.searchModal.registerSource('base', MILITARY_BASES.map(b => ({
       id: b.id,
       title: b.name,
@@ -1156,20 +783,6 @@ export class App {
       title: c.name,
       subtitle: c.major ? 'Major cable' : '',
       data: c,
-    })));
-
-    this.searchModal.registerSource('datacenter', AI_DATA_CENTERS.map(d => ({
-      id: d.id,
-      title: d.name,
-      subtitle: `${d.owner} ${d.chipType || ''}`.trim(),
-      data: d,
-    })));
-
-    this.searchModal.registerSource('nuclear', NUCLEAR_FACILITIES.map(n => ({
-      id: n.id,
-      title: n.name,
-      subtitle: `${n.type} ${n.operator || ''}`.trim(),
-      data: n,
     })));
 
     // Register countries
@@ -1213,22 +826,15 @@ export class App {
         }, 300);
         break;
       }
-      case 'conflict': {
-        const conflict = result.data as typeof CONFLICT_ZONES[0];
+      case 'conflict':
         this.map?.setView('global');
-        setTimeout(() => {
-          this.map?.triggerConflictClick(conflict.id);
-        }, 300);
         break;
-      }
       case 'market': {
         this.scrollToPanel('markets');
         break;
       }
-      case 'prediction': {
-        this.scrollToPanel('polymarket');
+      case 'prediction':
         break;
-      }
       case 'base': {
         const base = result.data as typeof MILITARY_BASES[0];
         this.map?.setView('global');
@@ -1241,24 +847,10 @@ export class App {
         this.map?.setView('global');
         break;
       }
-      case 'datacenter': {
-        const dc = result.data as typeof AI_DATA_CENTERS[0];
+      case 'datacenter':
+      case 'nuclear':
         this.map?.setView('global');
-        setTimeout(() => {
-          this.map?.setCenter(dc.lat, dc.lon, 4);
-        }, 300);
         break;
-      }
-      case 'nuclear': {
-        const nuc = result.data as typeof NUCLEAR_FACILITIES[0];
-        this.map?.setView('global');
-        this.map?.enableLayer('nuclear');
-        this.mapLayers.nuclear = true;
-        setTimeout(() => {
-          this.map?.triggerNuclearClick(nuc.id);
-        }, 300);
-        break;
-      }
       case 'earthquake':
       case 'outage':
         // These are dynamic, just switch to map view
@@ -1413,8 +1005,6 @@ export class App {
       liquidity: 0,
     }));
     this.latestPredictions = predictions;
-    (this.panels['polymarket'] as PredictionPanel).renderPredictions(predictions);
-
     this.map?.setHotspotLevels(snapshot.hotspotLevels);
   }
 
@@ -1422,14 +1012,6 @@ export class App {
     this.container.innerHTML = `
       <div class="header">
         <div class="header-left">
-          <div class="variant-switcher">
-            <a href="#"
-               class="variant-option active"
-               title="Fodi-eyes">
-              <span class="variant-icon">👁</span>
-              <span class="variant-label">Fodi-eyes</span>
-            </a>
-          </div>
           <img src="/logo-fodi.png" alt="Fodi-eyes" class="header-logo" style="height:28px;margin-right:6px;vertical-align:middle;" /><span class="logo">FODI-EYES</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <span class="credit-link">
             <span class="credit-text">by Fodi S.r.l.</span>
@@ -1438,20 +1020,9 @@ export class App {
             <span class="status-dot"></span>
             <span>${t('header.live')}</span>
           </div>
-          <div class="region-selector">
-            <select id="regionSelect" class="region-select">
-              <option value="eu">🇮🇹 Italia</option>
-              <option value="global">${t('components.deckgl.views.global')}</option>
-              <option value="america">${t('components.deckgl.views.americas')}</option>
-              <option value="mena">${t('components.deckgl.views.mena')}</option>
-              <option value="asia">${t('components.deckgl.views.asia')}</option>
-              <option value="latam">${t('components.deckgl.views.latam')}</option>
-              <option value="africa">${t('components.deckgl.views.africa')}</option>
-              <option value="oceania">${t('components.deckgl.views.oceania')}</option>
-            </select>
-          </div>
         </div>
         <div class="header-right">
+          <span class="header-clock" id="headerClock"></span>
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
           ${this.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
@@ -1465,22 +1036,11 @@ export class App {
         </div>
       </div>
       <div class="main-content">
-        <div class="map-section" id="mapSection">
-          <div class="panel-header">
-            <div class="panel-header-left">
-              <span class="panel-title">${t('panels.map')}</span>
-            </div>
-            <span class="header-clock" id="headerClock"></span>
-            <button class="map-pin-btn" id="mapPinBtn" title="${t('header.pinMap')}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 17v5M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16a1 1 0 001 1h12a1 1 0 001-1v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V7a1 1 0 011-1 1 1 0 001-1V4a1 1 0 00-1-1H8a1 1 0 00-1 1v1a1 1 0 001 1 1 1 0 011 1v3.76z"/>
-              </svg>
-            </button>
-          </div>
+        <div class="map-fullscreen" id="mapFullscreen">
           <div class="map-container" id="mapContainer"></div>
-          <div class="map-resize-handle" id="mapResizeHandle"></div>
         </div>
-        <div class="panels-grid" id="panelsGrid"></div>
+        <div id="sidebarMount"></div>
+        <button class="sidebar-toggle" id="sidebarToggle">◀</button>
       </div>
       <div class="modal-overlay" id="settingsModal">
         <div class="modal">
@@ -1576,47 +1136,95 @@ export class App {
     this.map?.destroy();
   }
 
-  private createPanels(): void {
-    const panelsGrid = document.getElementById('panelsGrid')!;
+  private sidebar: Sidebar | null = null;
 
-    // Initialize map in the map section
-    // Default to MENA view on mobile for better focus
-    // Uses deck.gl (WebGL) on desktop, falls back to D3/SVG on mobile
+  private createPanels(): void {
+    // Initialize map fullscreen
     const mapContainer = document.getElementById('mapContainer') as HTMLElement;
     this.map = new MapContainer(mapContainer, {
       zoom: this.isMobile ? 2.5 : 1.0,
-      pan: { x: 0, y: 0 },  // Centered view to show full world
+      pan: { x: 0, y: 0 },
       view: 'eu',
       layers: this.mapLayers,
       timeRange: '7d',
     });
 
-    // Initialize escalation service with data getters
     this.map.initEscalationGetters();
     this.currentTimeRange = this.map.getTimeRange();
 
-    // Create all panels
+    // === TAB: News ===
+    const liveNewsPanel = new LiveNewsPanel();
+    this.panels['live-news'] = liveNewsPanel;
+
     const politicsPanel = new NewsPanel('politics', t('panels.politics'));
     this.attachRelatedAssetHandlers(politicsPanel);
     this.newsPanels['politics'] = politicsPanel;
     this.panels['politics'] = politicsPanel;
+
+    const intelPanel = new NewsPanel('intel', t('panels.intel'));
+    this.attachRelatedAssetHandlers(intelPanel);
+    this.newsPanels['intel'] = intelPanel;
+    this.panels['intel'] = intelPanel;
+
+    const govPanel = new NewsPanel('gov', t('panels.gov'));
+    this.attachRelatedAssetHandlers(govPanel);
+    this.newsPanels['gov'] = govPanel;
+    this.panels['gov'] = govPanel;
+
+    const thinktanksPanel = new NewsPanel('thinktanks', t('panels.thinktanks'));
+    this.attachRelatedAssetHandlers(thinktanksPanel);
+    this.newsPanels['thinktanks'] = thinktanksPanel;
+    this.panels['thinktanks'] = thinktanksPanel;
+
+    const energyPanel = new NewsPanel('energy', t('panels.energy'));
+    this.attachRelatedAssetHandlers(energyPanel);
+    this.newsPanels['energy'] = energyPanel;
+    this.panels['energy'] = energyPanel;
 
     const techPanel = new NewsPanel('tech', t('panels.tech'));
     this.attachRelatedAssetHandlers(techPanel);
     this.newsPanels['tech'] = techPanel;
     this.panels['tech'] = techPanel;
 
-    const financePanel = new NewsPanel('finance', t('panels.finance'));
-    this.attachRelatedAssetHandlers(financePanel);
-    this.newsPanels['finance'] = financePanel;
-    this.panels['finance'] = financePanel;
+    const aiPanel = new NewsPanel('ai', t('panels.ai'));
+    this.attachRelatedAssetHandlers(aiPanel);
+    this.newsPanels['ai'] = aiPanel;
+    this.panels['ai'] = aiPanel;
 
-    const heatmapPanel = new HeatmapPanel();
-    this.panels['heatmap'] = heatmapPanel;
+    // === TAB: Webcam ===
+    const webcamPanel = new TerritorialWebcamsPanel();
+    this.panels['webcam-territoriali'] = webcamPanel;
+    webcamPanel.setWebcamSelectHandler((webcam) => {
+      this.map?.setCenter(webcam.lat, webcam.lon, 12);
+    });
+
+    // === TAB: Intel ===
+    const entitySearchPanel = new EntitySearchPanel();
+    this.panels['entity-search'] = entitySearchPanel;
+
+    const osintArsenalPanel = new OsintArsenalPanel();
+    this.panels['osint-arsenal'] = osintArsenalPanel;
+
+    const insightsPanel = new InsightsPanel();
+    this.panels['insights'] = insightsPanel;
+
+    // === TAB: Dati ===
+    const italiaDataPanel = new ItaliaDataPanel();
+    this.panels['italia-data'] = italiaDataPanel;
+
+    const openDataPanel = new OpenDataPanel();
+    this.panels['open-data'] = openDataPanel;
+
+    const economicPanel = new EconomicPanel();
+    this.panels['economic'] = economicPanel;
 
     const marketsPanel = new MarketPanel();
     this.panels['markets'] = marketsPanel;
 
+    const politicsItalyPanel = new PoliticsItalyPanel();
+    this.panels['politics-italy'] = politicsItalyPanel;
+
+    // === TAB: Tools ===
     const monitorPanel = new MonitorPanel(this.monitors);
     this.panels['monitors'] = monitorPanel;
     monitorPanel.onChanged((monitors) => {
@@ -1625,143 +1233,24 @@ export class App {
       this.updateMonitorResults();
     });
 
-    const commoditiesPanel = new CommoditiesPanel();
-    this.panels['commodities'] = commoditiesPanel;
+    const serviceStatusPanel = new ServiceStatusPanel();
+    this.panels['service-status'] = serviceStatusPanel;
 
-    const predictionPanel = new PredictionPanel();
-    this.panels['polymarket'] = predictionPanel;
+    const satelliteFiresPanel = new SatelliteFiresPanel();
+    this.panels['satellite-fires'] = satelliteFiresPanel;
 
-    const govPanel = new NewsPanel('gov', t('panels.gov'));
-    this.attachRelatedAssetHandlers(govPanel);
-    this.newsPanels['gov'] = govPanel;
-    this.panels['gov'] = govPanel;
+    const climatePanel = new ClimateAnomalyPanel();
+    climatePanel.setZoneClickHandler((lat, lon) => {
+      this.map?.setCenter(lat, lon, 4);
+    });
+    this.panels['climate'] = climatePanel;
 
-    const intelPanel = new NewsPanel('intel', t('panels.intel'));
-    this.attachRelatedAssetHandlers(intelPanel);
-    this.newsPanels['intel'] = intelPanel;
-    this.panels['intel'] = intelPanel;
+    if (this.isDesktopApp) {
+      const runtimeConfigPanel = new RuntimeConfigPanel({ mode: 'alert' });
+      this.panels['runtime-config'] = runtimeConfigPanel;
+    }
 
-    const cryptoPanel = new CryptoPanel();
-    this.panels['crypto'] = cryptoPanel;
-
-    const middleeastPanel = new NewsPanel('middleeast', t('panels.middleeast'));
-    this.attachRelatedAssetHandlers(middleeastPanel);
-    this.newsPanels['middleeast'] = middleeastPanel;
-    this.panels['middleeast'] = middleeastPanel;
-
-    const layoffsPanel = new NewsPanel('layoffs', t('panels.layoffs'));
-    this.attachRelatedAssetHandlers(layoffsPanel);
-    this.newsPanels['layoffs'] = layoffsPanel;
-    this.panels['layoffs'] = layoffsPanel;
-
-    const aiPanel = new NewsPanel('ai', t('panels.ai'));
-    this.attachRelatedAssetHandlers(aiPanel);
-    this.newsPanels['ai'] = aiPanel;
-    this.panels['ai'] = aiPanel;
-
-    // Tech variant panels
-    const startupsPanel = new NewsPanel('startups', t('panels.startups'));
-    this.attachRelatedAssetHandlers(startupsPanel);
-    this.newsPanels['startups'] = startupsPanel;
-    this.panels['startups'] = startupsPanel;
-
-    const vcblogsPanel = new NewsPanel('vcblogs', t('panels.vcblogs'));
-    this.attachRelatedAssetHandlers(vcblogsPanel);
-    this.newsPanels['vcblogs'] = vcblogsPanel;
-    this.panels['vcblogs'] = vcblogsPanel;
-
-    const regionalStartupsPanel = new NewsPanel('regionalStartups', t('panels.regionalStartups'));
-    this.attachRelatedAssetHandlers(regionalStartupsPanel);
-    this.newsPanels['regionalStartups'] = regionalStartupsPanel;
-    this.panels['regionalStartups'] = regionalStartupsPanel;
-
-    const unicornsPanel = new NewsPanel('unicorns', t('panels.unicorns'));
-    this.attachRelatedAssetHandlers(unicornsPanel);
-    this.newsPanels['unicorns'] = unicornsPanel;
-    this.panels['unicorns'] = unicornsPanel;
-
-    const acceleratorsPanel = new NewsPanel('accelerators', t('panels.accelerators'));
-    this.attachRelatedAssetHandlers(acceleratorsPanel);
-    this.newsPanels['accelerators'] = acceleratorsPanel;
-    this.panels['accelerators'] = acceleratorsPanel;
-
-    const fundingPanel = new NewsPanel('funding', t('panels.funding'));
-    this.attachRelatedAssetHandlers(fundingPanel);
-    this.newsPanels['funding'] = fundingPanel;
-    this.panels['funding'] = fundingPanel;
-
-    const producthuntPanel = new NewsPanel('producthunt', t('panels.producthunt'));
-    this.attachRelatedAssetHandlers(producthuntPanel);
-    this.newsPanels['producthunt'] = producthuntPanel;
-    this.panels['producthunt'] = producthuntPanel;
-
-    const securityPanel = new NewsPanel('security', t('panels.security'));
-    this.attachRelatedAssetHandlers(securityPanel);
-    this.newsPanels['security'] = securityPanel;
-    this.panels['security'] = securityPanel;
-
-    const policyPanel = new NewsPanel('policy', t('panels.policy'));
-    this.attachRelatedAssetHandlers(policyPanel);
-    this.newsPanels['policy'] = policyPanel;
-    this.panels['policy'] = policyPanel;
-
-    const hardwarePanel = new NewsPanel('hardware', t('panels.hardware'));
-    this.attachRelatedAssetHandlers(hardwarePanel);
-    this.newsPanels['hardware'] = hardwarePanel;
-    this.panels['hardware'] = hardwarePanel;
-
-    const cloudPanel = new NewsPanel('cloud', t('panels.cloud'));
-    this.attachRelatedAssetHandlers(cloudPanel);
-    this.newsPanels['cloud'] = cloudPanel;
-    this.panels['cloud'] = cloudPanel;
-
-    const devPanel = new NewsPanel('dev', t('panels.dev'));
-    this.attachRelatedAssetHandlers(devPanel);
-    this.newsPanels['dev'] = devPanel;
-    this.panels['dev'] = devPanel;
-
-    const githubPanel = new NewsPanel('github', t('panels.github'));
-    this.attachRelatedAssetHandlers(githubPanel);
-    this.newsPanels['github'] = githubPanel;
-    this.panels['github'] = githubPanel;
-
-    const ipoPanel = new NewsPanel('ipo', t('panels.ipo'));
-    this.attachRelatedAssetHandlers(ipoPanel);
-    this.newsPanels['ipo'] = ipoPanel;
-    this.panels['ipo'] = ipoPanel;
-
-    const thinktanksPanel = new NewsPanel('thinktanks', t('panels.thinktanks'));
-    this.attachRelatedAssetHandlers(thinktanksPanel);
-    this.newsPanels['thinktanks'] = thinktanksPanel;
-    this.panels['thinktanks'] = thinktanksPanel;
-
-    const economicPanel = new EconomicPanel();
-    this.panels['economic'] = economicPanel;
-
-    // New Regional Panels
-    const africaPanel = new NewsPanel('africa', t('panels.africa'));
-    this.attachRelatedAssetHandlers(africaPanel);
-    this.newsPanels['africa'] = africaPanel;
-    this.panels['africa'] = africaPanel;
-
-    const latamPanel = new NewsPanel('latam', t('panels.latam'));
-    this.attachRelatedAssetHandlers(latamPanel);
-    this.newsPanels['latam'] = latamPanel;
-    this.panels['latam'] = latamPanel;
-
-    const asiaPanel = new NewsPanel('asia', t('panels.asia'));
-    this.attachRelatedAssetHandlers(asiaPanel);
-    this.newsPanels['asia'] = asiaPanel;
-    this.panels['asia'] = asiaPanel;
-
-    const energyPanel = new NewsPanel('energy', t('panels.energy'));
-    this.attachRelatedAssetHandlers(energyPanel);
-    this.newsPanels['energy'] = energyPanel;
-    this.panels['energy'] = energyPanel;
-
-    // Dynamically create NewsPanel instances for any FEEDS category.
-    // If a category key collides with an existing data panel key (e.g. markets),
-    // create a separate `${key}-news` panel to avoid clobbering the data panel.
+    // Dynamically create NewsPanel instances for any remaining FEEDS category
     for (const key of Object.keys(FEEDS)) {
       if (this.newsPanels[key]) continue;
       if (!Array.isArray((FEEDS as Record<string, unknown>)[key])) continue;
@@ -1775,107 +1264,31 @@ export class App {
       this.panels[panelKey] = panel;
     }
 
-    // Geopolitical panels
-    {
-      const satelliteFiresPanel = new SatelliteFiresPanel();
-      this.panels['satellite-fires'] = satelliteFiresPanel;
+    // === SIDEBAR ===
+    this.sidebar = new Sidebar();
+    this.sidebar.registerPanels('news', [
+      liveNewsPanel, politicsPanel, intelPanel, govPanel,
+      thinktanksPanel, energyPanel, techPanel, aiPanel,
+    ]);
+    this.sidebar.registerPanels('webcam', [webcamPanel]);
+    this.sidebar.registerPanels('intel', [entitySearchPanel, osintArsenalPanel, insightsPanel]);
+    this.sidebar.registerPanels('dati', [italiaDataPanel, openDataPanel, economicPanel, marketsPanel, politicsItalyPanel]);
+    this.sidebar.registerPanels('tools', [
+      monitorPanel, serviceStatusPanel, satelliteFiresPanel, climatePanel,
+      ...(this.isDesktopApp && this.panels['runtime-config'] ? [this.panels['runtime-config']] : []),
+    ]);
 
-      const climatePanel = new ClimateAnomalyPanel();
-      climatePanel.setZoneClickHandler((lat, lon) => {
-        this.map?.setCenter(lat, lon, 4);
-      });
-      this.panels['climate'] = climatePanel;
-
-      // OSINT & Italy Intelligence panels
-      const osintArsenalPanel = new OsintArsenalPanel();
-      this.panels['osint-arsenal'] = osintArsenalPanel;
-
-      const italiaDataPanel = new ItaliaDataPanel();
-      this.panels['italia-data'] = italiaDataPanel;
-
-      const politicsItalyPanel = new PoliticsItalyPanel();
-      this.panels['politics-italy'] = politicsItalyPanel;
-
-      const openDataPanel = new OpenDataPanel();
-      this.panels['open-data'] = openDataPanel;
-
-      const entitySearchPanel = new EntitySearchPanel();
-      this.panels['entity-search'] = entitySearchPanel;
+    const sidebarMount = document.getElementById('sidebarMount');
+    if (sidebarMount) {
+      sidebarMount.replaceWith(this.sidebar.getElement());
     }
 
-    const liveNewsPanel = new LiveNewsPanel();
-    this.panels['live-news'] = liveNewsPanel;
-
-    const liveWebcamsPanel = new LiveWebcamsPanel();
-    this.panels['live-webcams'] = liveWebcamsPanel;
-
-    // Service Status Panel
-    const serviceStatusPanel = new ServiceStatusPanel();
-    this.panels['service-status'] = serviceStatusPanel;
-
-    if (this.isDesktopApp) {
-      const runtimeConfigPanel = new RuntimeConfigPanel({ mode: 'alert' });
-      this.panels['runtime-config'] = runtimeConfigPanel;
-    }
-
-    // AI Insights Panel (desktop only - hides itself on mobile)
-    const insightsPanel = new InsightsPanel();
-    this.panels['insights'] = insightsPanel;
-
-    // Add panels to grid in saved order
-    // Use DEFAULT_PANELS keys for variant-aware panel order
-    const defaultOrder = Object.keys(DEFAULT_PANELS).filter(k => k !== 'map');
-    const savedOrder = this.getSavedPanelOrder();
-    // Merge saved order with default to include new panels
-    let panelOrder = defaultOrder;
-    if (savedOrder.length > 0) {
-      // Add any missing panels from default that aren't in saved order
-      const missing = defaultOrder.filter(k => !savedOrder.includes(k));
-      // Remove any saved panels that no longer exist
-      const valid = savedOrder.filter(k => defaultOrder.includes(k));
-      // Insert missing panels after 'politics' (except monitors which goes at end)
-      const monitorsIdx = valid.indexOf('monitors');
-      if (monitorsIdx !== -1) valid.splice(monitorsIdx, 1); // Remove monitors temporarily
-      const insertIdx = valid.indexOf('politics') + 1 || 0;
-      const newPanels = missing.filter(k => k !== 'monitors');
-      valid.splice(insertIdx, 0, ...newPanels);
-      valid.push('monitors'); // Always put monitors last
-      panelOrder = valid;
-    }
-
-    // CRITICAL: live-news MUST be first for CSS Grid layout (spans 2 columns)
-    // Move it to position 0 if it exists and isn't already first
-    const liveNewsIdx = panelOrder.indexOf('live-news');
-    if (liveNewsIdx > 0) {
-      panelOrder.splice(liveNewsIdx, 1);
-      panelOrder.unshift('live-news');
-    }
-
-    // live-webcams MUST follow live-news (one-time migration for existing users)
-    const webcamsIdx = panelOrder.indexOf('live-webcams');
-    if (webcamsIdx !== -1 && webcamsIdx !== panelOrder.indexOf('live-news') + 1) {
-      panelOrder.splice(webcamsIdx, 1);
-      const afterNews = panelOrder.indexOf('live-news') + 1;
-      panelOrder.splice(afterNews, 0, 'live-webcams');
-    }
-
-    // Desktop configuration should stay easy to reach in Tauri builds.
-    if (this.isDesktopApp) {
-      const runtimeIdx = panelOrder.indexOf('runtime-config');
-      if (runtimeIdx > 1) {
-        panelOrder.splice(runtimeIdx, 1);
-        panelOrder.splice(1, 0, 'runtime-config');
-      } else if (runtimeIdx === -1) {
-        panelOrder.splice(1, 0, 'runtime-config');
-      }
-    }
-
-    panelOrder.forEach((key: string) => {
-      const panel = this.panels[key];
-      if (panel) {
-        const el = panel.getElement();
-        this.makeDraggable(el, key);
-        panelsGrid.appendChild(el);
+    // Sidebar toggle
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+      this.sidebar?.toggle();
+      const toggleBtn = document.getElementById('sidebarToggle');
+      if (toggleBtn) {
+        toggleBtn.textContent = this.sidebar?.isCollapsed() ? '▶' : '◀';
       }
     });
 
@@ -1922,30 +1335,6 @@ export class App {
       }
     }
 
-    // Sync header region selector with initial view
-    const regionSelect = document.getElementById('regionSelect') as HTMLSelectElement;
-    const currentView = this.map.getState().view;
-    if (regionSelect && currentView) {
-      regionSelect.value = currentView;
-    }
-  }
-
-  private getSavedPanelOrder(): string[] {
-    try {
-      const saved = localStorage.getItem(this.PANEL_ORDER_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  }
-
-  private savePanelOrder(): void {
-    const grid = document.getElementById('panelsGrid');
-    if (!grid) return;
-    const order = Array.from(grid.children)
-      .map((el) => (el as HTMLElement).dataset.panel)
-      .filter((key): key is string => !!key);
-    localStorage.setItem(this.PANEL_ORDER_KEY, JSON.stringify(order));
   }
 
   private attachRelatedAssetHandlers(panel: NewsPanel): void {
@@ -1966,82 +1355,7 @@ export class App {
         saveToStorage(STORAGE_KEYS.mapLayers, this.mapLayers);
         this.map.triggerBaseClick(asset.id);
         break;
-      case 'nuclear':
-        this.map.enableLayer('nuclear');
-        this.mapLayers.nuclear = true;
-        saveToStorage(STORAGE_KEYS.mapLayers, this.mapLayers);
-        this.map.triggerNuclearClick(asset.id);
-        break;
     }
-  }
-
-  private makeDraggable(el: HTMLElement, key: string): void {
-    el.draggable = true;
-    el.dataset.panel = key;
-
-    el.addEventListener('dragstart', (e) => {
-      const target = e.target as HTMLElement;
-      // Don't start drag if panel is being resized
-      if (el.dataset.resizing === 'true') {
-        e.preventDefault();
-        return;
-      }
-      // Don't start drag if target is the resize handle
-      if (target.classList?.contains('panel-resize-handle') || target.closest?.('.panel-resize-handle')) {
-        e.preventDefault();
-        return;
-      }
-      el.classList.add('dragging');
-      e.dataTransfer?.setData('text/plain', key);
-    });
-
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
-      this.savePanelOrder();
-    });
-
-    el.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      const dragging = document.querySelector('.dragging');
-      if (!dragging || dragging === el) return;
-
-      const grid = document.getElementById('panelsGrid');
-      if (!grid) return;
-
-      const rowTolerancePx = 24;
-      const siblings = Array.from(grid.children).filter((c) => {
-        if (c === dragging) return false;
-        const el = c as HTMLElement;
-        return !el.classList.contains('hidden');
-      });
-      const orderedSiblings = siblings.sort((a, b) => {
-        const aRect = a.getBoundingClientRect();
-        const bRect = b.getBoundingClientRect();
-        if (Math.abs(aRect.top - bRect.top) <= rowTolerancePx) {
-          return aRect.left - bRect.left;
-        }
-        return aRect.top - bRect.top;
-      });
-
-      const nextSibling = orderedSiblings.find((sibling) => {
-        const rect = sibling.getBoundingClientRect();
-        const beforeRow = e.clientY < rect.top + rowTolerancePx;
-        if (beforeRow) return true;
-
-        const inRowBand = e.clientY >= rect.top + rowTolerancePx && e.clientY <= rect.bottom - rowTolerancePx;
-        if (inRowBand) {
-          return e.clientX < rect.left + rect.width / 2;
-        }
-
-        return e.clientY < rect.top + rect.height / 2;
-      });
-
-      if (nextSibling) {
-        grid.insertBefore(dragging, nextSibling);
-      } else {
-        grid.appendChild(dragging);
-      }
-    });
   }
 
   private setupEventListeners(): void {
@@ -2103,12 +1417,7 @@ export class App {
       document.addEventListener('fullscreenchange', this.boundFullscreenHandler);
     }
 
-    // Region selector
-    const regionSelect = document.getElementById('regionSelect') as HTMLSelectElement;
-    regionSelect?.addEventListener('change', () => {
-      this.map?.setView(regionSelect.value as MapView);
-      trackMapViewChange(regionSelect.value);
-    });
+    // Region selector removed — map-centered layout
 
     // Language selector
     const langSelect = document.getElementById('langSelect') as HTMLSelectElement;
@@ -2191,14 +1500,6 @@ export class App {
 
     this.map.onStateChanged(() => {
       update();
-      // Sync header region selector with map view
-      const regionSelect = document.getElementById('regionSelect') as HTMLSelectElement;
-      if (regionSelect && this.map) {
-        const state = this.map.getState();
-        if (regionSelect.value !== state.view) {
-          regionSelect.value = state.view;
-        }
-      }
     });
     update();
   }
@@ -2214,7 +1515,7 @@ export class App {
       center,
       timeRange: state.timeRange,
       layers: state.layers,
-      country: this.countryBriefPage?.isVisible() ? (this.countryBriefPage.getCode() ?? undefined) : undefined,
+      country: undefined,
     });
   }
 
@@ -2258,77 +1559,13 @@ export class App {
   }
 
   private setupMapResize(): void {
-    const mapSection = document.getElementById('mapSection');
-    const resizeHandle = document.getElementById('mapResizeHandle');
-    if (!mapSection || !resizeHandle) return;
-
-    const getMinHeight = () => (window.innerWidth >= 2000 ? 320 : 400);
-    const getMaxHeight = () => Math.max(getMinHeight(), window.innerHeight - 60);
-
-    // Load saved height
-    const savedHeight = localStorage.getItem('map-height');
-    if (savedHeight) {
-      const numeric = Number.parseInt(savedHeight, 10);
-      if (Number.isFinite(numeric)) {
-        const clamped = Math.max(getMinHeight(), Math.min(numeric, getMaxHeight()));
-        mapSection.style.height = `${clamped}px`;
-        if (clamped !== numeric) {
-          localStorage.setItem('map-height', `${clamped}px`);
-        }
-      } else {
-        localStorage.removeItem('map-height');
-      }
-    }
-
-    let isResizing = false;
-    let startY = 0;
-    let startHeight = 0;
-
-    resizeHandle.addEventListener('mousedown', (e) => {
-      isResizing = true;
-      startY = e.clientY;
-      startHeight = mapSection.offsetHeight;
-      mapSection.classList.add('resizing');
-      document.body.style.cursor = 'ns-resize';
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isResizing) return;
-      const deltaY = e.clientY - startY;
-      const newHeight = Math.max(getMinHeight(), Math.min(startHeight + deltaY, getMaxHeight()));
-      mapSection.style.height = `${newHeight}px`;
-      this.map?.render();
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (!isResizing) return;
-      isResizing = false;
-      mapSection.classList.remove('resizing');
-      document.body.style.cursor = '';
-      // Save height preference
-      localStorage.setItem('map-height', mapSection.style.height);
-      this.map?.render();
-    });
+    // mapResizeHandle removed — map is fullscreen in new layout
+    return;
   }
 
   private setupMapPin(): void {
-    const mapSection = document.getElementById('mapSection');
-    const pinBtn = document.getElementById('mapPinBtn');
-    if (!mapSection || !pinBtn) return;
-
-    // Load saved pin state
-    const isPinned = localStorage.getItem('map-pinned') === 'true';
-    if (isPinned) {
-      mapSection.classList.add('pinned');
-      pinBtn.classList.add('active');
-    }
-
-    pinBtn.addEventListener('click', () => {
-      const nowPinned = mapSection.classList.toggle('pinned');
-      pinBtn.classList.toggle('active', nowPinned);
-      localStorage.setItem('map-pinned', String(nowPinned));
-    });
+    // mapPinBtn removed — map is fullscreen in new layout
+    return;
   }
 
   private renderPanelToggles(): void {
@@ -2617,13 +1854,6 @@ export class App {
       const matches = countKeywordMatches(hotspot.keywords);
       if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
         bestMatch = { lat: hotspot.lat, lon: hotspot.lon, matches };
-      }
-    }
-
-    for (const conflict of CONFLICT_ZONES) {
-      const matches = countKeywordMatches(conflict.keywords);
-      if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
-        bestMatch = { lat: conflict.center[1], lon: conflict.center[0], matches };
       }
     }
 
@@ -2926,84 +2156,17 @@ export class App {
         if (stocksResult.data.length === 0) {
           this.panels['markets']?.showConfigError(finnhubConfigMsg);
         }
-        this.panels['heatmap']?.showConfigError(finnhubConfigMsg);
       } else {
         this.statusPanel?.updateApi('Finnhub', { status: 'ok' });
-
-        const sectorsResult = await fetchMultipleStocks(
-          SECTORS.map((s) => ({ ...s, display: s.name })),
-          {
-            onBatch: (partialSectors) => {
-              (this.panels['heatmap'] as HeatmapPanel).renderHeatmap(
-                partialSectors.map((s) => ({ name: s.name, change: s.change }))
-              );
-            },
-          }
-        );
-        (this.panels['heatmap'] as HeatmapPanel).renderHeatmap(
-          sectorsResult.data.map((s) => ({ name: s.name, change: s.change }))
-        );
-      }
-
-      const commoditiesPanel = this.panels['commodities'] as CommoditiesPanel;
-      const mapCommodity = (c: MarketData) => ({ display: c.display, price: c.price, change: c.change, sparkline: c.sparkline });
-
-      let commoditiesLoaded = false;
-      for (let attempt = 0; attempt < 3 && !commoditiesLoaded; attempt++) {
-        if (attempt > 0) {
-          commoditiesPanel.showRetrying();
-          await new Promise(r => setTimeout(r, 20_000));
-        }
-        const commoditiesResult = await fetchMultipleStocks(COMMODITIES, {
-          onBatch: (partial) => commoditiesPanel.renderCommodities(partial.map(mapCommodity)),
-        });
-        const mapped = commoditiesResult.data.map(mapCommodity);
-        if (mapped.some(d => d.price !== null)) {
-          commoditiesPanel.renderCommodities(mapped);
-          commoditiesLoaded = true;
-        }
-      }
-      if (!commoditiesLoaded) {
-        commoditiesPanel.renderCommodities([]);
       }
     } catch {
       this.statusPanel?.updateApi('Finnhub', { status: 'error' });
     }
-
-    try {
-      // Crypto with retry
-      let crypto = await fetchCrypto();
-      if (crypto.length === 0) {
-        (this.panels['crypto'] as CryptoPanel).showRetrying();
-        await new Promise(r => setTimeout(r, 20_000));
-        crypto = await fetchCrypto();
-      }
-      (this.panels['crypto'] as CryptoPanel).renderCrypto(crypto);
-      this.statusPanel?.updateApi('CoinGecko', { status: crypto.length > 0 ? 'ok' : 'error' });
-    } catch {
-      this.statusPanel?.updateApi('CoinGecko', { status: 'error' });
-    }
   }
 
   private async loadPredictions(): Promise<void> {
-    try {
-      const predictions = await fetchPredictions();
-      this.latestPredictions = predictions;
-      (this.panels['polymarket'] as PredictionPanel).renderPredictions(predictions);
-
-      this.statusPanel?.updateFeed('Polymarket', { status: 'ok', itemCount: predictions.length });
-      this.statusPanel?.updateApi('Polymarket', { status: 'ok' });
-      dataFreshness.recordUpdate('polymarket', predictions.length);
-      dataFreshness.recordUpdate('predictions', predictions.length);
-
-      // Run correlation analysis in background (fire-and-forget via Web Worker)
-      void this.runCorrelationAnalysis();
-    } catch (error) {
-      this.statusPanel?.updateFeed('Polymarket', { status: 'error', errorMessage: String(error) });
-      this.statusPanel?.updateApi('Polymarket', { status: 'error' });
-      dataFreshness.recordError('polymarket', String(error));
-      dataFreshness.recordError('predictions', String(error));
-    }
+    // PredictionPanel (polymarket) removed — map-centered layout
+    return;
   }
 
   private async loadNatural(): Promise<void> {
@@ -3293,47 +2456,6 @@ export class App {
   private updateMonitorResults(): void {
     const monitorPanel = this.panels['monitors'] as MonitorPanel;
     monitorPanel.renderResults(this.allNews);
-  }
-
-  private async runCorrelationAnalysis(): Promise<void> {
-    try {
-      // Ensure we have clusters (hybrid: semantic + Jaccard when ML available)
-      if (this.latestClusters.length === 0 && this.allNews.length > 0) {
-        this.latestClusters = mlWorker.isAvailable
-          ? await clusterNewsHybrid(this.allNews)
-          : await analysisWorker.clusterNews(this.allNews);
-      }
-
-      // Ingest news clusters for CII
-      if (this.latestClusters.length > 0) {
-        ingestNewsForCII(this.latestClusters);
-        dataFreshness.recordUpdate('gdelt', this.latestClusters.length);
-        // CII panel removed - risk-overview handles this now
-      }
-
-      // Run correlation analysis off main thread via Web Worker
-      const signals = await analysisWorker.analyzeCorrelations(
-        this.latestClusters,
-        this.latestPredictions,
-        this.latestMarkets
-      );
-
-      // Detect geographic convergence (suppress during learning mode)
-      let geoSignals: ReturnType<typeof geoConvergenceToSignal>[] = [];
-      if (!isInLearningMode()) {
-        const geoAlerts = detectGeoConvergence(this.seenGeoAlerts);
-        geoSignals = geoAlerts.map(geoConvergenceToSignal);
-      }
-
-      const keywordSpikeSignals = drainTrendingSignals();
-      const allSignals = [...signals, ...geoSignals, ...keywordSpikeSignals];
-      if (allSignals.length > 0) {
-        addToSignalHistory(allSignals);
-        if (this.shouldShowIntelligenceNotifications()) this.signalModal?.show(allSignals);
-      }
-    } catch (error) {
-      console.error('[App] Correlation analysis failed:', error);
-    }
   }
 
   private async loadFirmsData(): Promise<void> {

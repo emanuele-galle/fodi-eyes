@@ -1,4 +1,4 @@
-import type { Hotspot, ConflictZone, MilitaryBase, UnderseaCable, NuclearFacility, StrategicWaterway, APTGroup, EconomicCenter, Spaceport, CriticalMineralProject } from '@/types';
+import type { Hotspot, MilitaryBase, UnderseaCable, StrategicWaterway, APTGroup, EconomicCenter, Spaceport, CriticalMineralProject } from '@/types';
 
 // Hotspot levels are NOT hardcoded - they are dynamically calculated based on news activity
 // All hotspots start at 'low' and rise to 'elevated' or 'high' based on matching news items
@@ -103,45 +103,6 @@ export const INTEL_HOTSPOTS: Hotspot[] = [
     description: 'Centro decisionale europeo (EU, NATO HQ)',
     status: 'Monitoring',
   },
-  {
-    id: 'ankara',
-    name: 'Ankara',
-    subtext: 'Crocevia geopolitico',
-    lat: 39.9,
-    lon: 32.9,
-    location: 'Turkey',
-    keywords: ['turkey', 'ankara', 'erdogan', 'turkish'],
-    agencies: ['Turkish Armed Forces'],
-    description: 'Turchia - crocevia geopolitico',
-    status: 'Monitoring',
-  },
-  {
-    id: 'tehran',
-    name: 'Tehran',
-    subtext: 'Dinamiche regionali',
-    lat: 35.7,
-    lon: 51.4,
-    location: 'Iran',
-    keywords: ['iran', 'tehran', 'khamenei', 'persian', 'iranian'],
-    agencies: ['Iran'],
-    description: 'Iran - dinamiche regionali Medio Oriente',
-    status: 'Monitoring',
-    escalationScore: 4,
-    escalationTrend: 'escalating',
-    escalationIndicators: ['Near-weapons-grade enrichment', 'Proxy attacks', 'Houthi coordination'],
-  },
-  {
-    id: 'cairo',
-    name: 'Cairo',
-    subtext: 'Egitto/Suez',
-    lat: 30.0,
-    lon: 31.2,
-    location: 'Egypt',
-    keywords: ['egypt', 'cairo', 'sisi', 'egyptian', 'suez'],
-    agencies: ['Egyptian Armed Forces'],
-    description: 'Egitto - partner ENI, Canale di Suez',
-    status: 'Monitoring',
-  },
 ];
 
 export const STRATEGIC_WATERWAYS: StrategicWaterway[] = [
@@ -158,40 +119,7 @@ export const APT_GROUPS: APTGroup[] = [
   { id: 'apt33', name: 'APT33/35', aka: 'Elfin/Charming Kitten', sponsor: 'Iran', lat: 34.0, lon: 53.0 },
 ];
 
-export const CONFLICT_ZONES: ConflictZone[] = [
-  {
-    id: 'ukraine',
-    name: 'Ukraine Conflict',
-    coords: [[30, 52], [40, 52], [40, 44], [30, 44]],
-    center: [35, 48],
-    intensity: 'high',
-    parties: ['Russia', 'Ukraine', 'NATO (support)'],
-    casualties: '500,000+ (est.)',
-    displaced: '6.5M+ refugees',
-    keywords: ['ukraine', 'russia', 'zelensky', 'putin', 'donbas', 'crimea'],
-    startDate: 'Feb 24, 2022',
-    location: 'Eastern Ukraine (Donetsk, Luhansk)',
-    description: 'Full-scale Russian invasion of Ukraine. Active frontlines in Donetsk, Luhansk, Zaporizhzhia, and Kherson oblasts.',
-    keyDevelopments: ['Battle of Bakhmut', 'Kursk incursion', 'Black Sea drone strikes', 'Infrastructure attacks'],
-  },
-  {
-    id: 'yemen_redsea',
-    name: 'Red Sea Crisis',
-    coords: [[42, 12], [42, 16], [44, 16], [45, 13], [44, 12]],
-    center: [43, 14],
-    intensity: 'high',
-    parties: ['Houthis', 'US/UK Coalition', 'Yemen Govt'],
-    casualties: 'Unknown (Maritime)',
-    displaced: '4.5M+ (Yemen Civil War)',
-    keywords: ['houthi', 'red sea', 'yemen', 'missile', 'drone', 'ship'],
-    startDate: 'Nov 19, 2023',
-    location: 'Red Sea & Gulf of Aden, Yemen',
-    description: 'Houthi maritime campaign against commercial shipping. US/UK airstrikes on Houthi targets. Impacts Mediterranean shipping via Suez.',
-    keyDevelopments: ['Ship hijackings', 'US airstrikes', 'Cable cuts', 'Sinking of Rubymar'],
-  },
-];
-
-// Installazioni NATO in Italia e Europa - ~20 basi rilevanti
+// Installazioni NATO in Italia
 export const MILITARY_BASES: MilitaryBase[] = [
   // Italia
   { id: 'aviano', name: 'Aviano AB', lat: 46.07, lon: 12.59, type: 'us-nato', description: 'USAF 31st Fighter Wing. Base aerea NATO nel Friuli.' },
@@ -206,15 +134,6 @@ export const MILITARY_BASES: MilitaryBase[] = [
   { id: 'gioia_del_colle', name: 'Gioia del Colle AB', lat: 40.77, lon: 16.93, type: 'us-nato', description: 'AMI 36° Stormo Eurofighter, Puglia.' },
   { id: 'amendola', name: 'Amendola AB', lat: 41.54, lon: 15.72, type: 'us-nato', description: 'AMI 32° Stormo, droni MQ-9 Reaper, Puglia.' },
   { id: 'trapani_birgi', name: 'Trapani-Birgi AB', lat: 37.91, lon: 12.49, type: 'us-nato', description: 'AMI 37° Stormo Eurofighter, Sicilia.' },
-  // Europa NATO
-  { id: 'ramstein', name: 'Ramstein AB', lat: 49.44, lon: 7.77, type: 'us-nato', description: 'USAF HQ Europe. Centro comando aereo NATO, Germania.' },
-  { id: 'incirlik', name: 'Incirlik AB', lat: 37.0, lon: 35.43, type: 'us-nato', description: 'USAF/Turkish base. Deposito nucleare NATO, Turchia.' },
-  { id: 'souda_bay', name: 'Souda Bay', lat: 35.49, lon: 24.12, type: 'us-nato', description: 'Base navale NATO, Creta (Grecia).' },
-  { id: 'rota', name: 'Naval Station Rota', lat: 36.62, lon: -6.35, type: 'us-nato', description: 'US/Spanish naval base. Aegis destroyers, Spagna.' },
-  { id: 'lajes', name: 'Lajes Field', lat: 38.77, lon: -27.09, type: 'us-nato', description: 'Base aerea NATO, Azzorre (Portogallo).' },
-  { id: 'keflavik', name: 'Keflavik', lat: 63.97, lon: -22.60, type: 'us-nato', description: 'Base NATO sorveglianza Nord Atlantico, Islanda.' },
-  { id: 'deveselu', name: 'Deveselu', lat: 43.76, lon: 24.37, type: 'us-nato', description: 'Aegis Ashore BMD site, Romania.' },
-  { id: 'redzikowo', name: 'Redzikowo', lat: 54.48, lon: 17.10, type: 'us-nato', description: 'Aegis Ashore BMD site, Polonia.' },
 ];
 
 // Cavi sottomarini che toccano Italia/Mediterraneo
@@ -338,59 +257,6 @@ export const UNDERSEA_CABLES: UnderseaCable[] = [
   },
 ];
 
-// Impianti nucleari EU
-export const NUCLEAR_FACILITIES: NuclearFacility[] = [
-  // France
-  { id: 'gravelines', name: 'Gravelines', lat: 51.01, lon: 2.14, type: 'plant', status: 'active' },
-  { id: 'paluel', name: 'Paluel', lat: 49.86, lon: 0.63, type: 'plant', status: 'active' },
-  { id: 'cattenom', name: 'Cattenom', lat: 49.42, lon: 6.22, type: 'plant', status: 'active' },
-  { id: 'bugey', name: 'Bugey', lat: 45.80, lon: 5.27, type: 'plant', status: 'active' },
-  { id: 'tricastin', name: 'Tricastin', lat: 44.33, lon: 4.73, type: 'plant', status: 'active' },
-  { id: 'cruas', name: 'Cruas', lat: 44.63, lon: 4.76, type: 'plant', status: 'active' },
-  { id: 'blayais', name: 'Blayais', lat: 45.26, lon: -0.69, type: 'plant', status: 'active' },
-  { id: 'golfech', name: 'Golfech', lat: 44.11, lon: 0.85, type: 'plant', status: 'active' },
-  { id: 'flamanville', name: 'Flamanville', lat: 49.54, lon: -1.88, type: 'plant', status: 'active' },
-  { id: 'la_hague', name: 'La Hague', lat: 49.68, lon: -1.88, type: 'enrichment', status: 'active' },
-  // UK
-  { id: 'hinkley_point', name: 'Hinkley Point', lat: 51.21, lon: -3.13, type: 'plant', status: 'active' },
-  { id: 'sizewell', name: 'Sizewell', lat: 52.21, lon: 1.62, type: 'plant', status: 'active' },
-  { id: 'heysham', name: 'Heysham', lat: 54.03, lon: -2.92, type: 'plant', status: 'active' },
-  { id: 'torness', name: 'Torness', lat: 55.97, lon: -2.41, type: 'plant', status: 'active' },
-  { id: 'sellafield', name: 'Sellafield', lat: 54.42, lon: -3.50, type: 'enrichment', status: 'active' },
-  // Germany (shutdown)
-  { id: 'neckarwestheim', name: 'Neckarwestheim', lat: 49.04, lon: 9.18, type: 'plant', status: 'inactive' },
-  { id: 'isar', name: 'Isar', lat: 48.61, lon: 12.29, type: 'plant', status: 'inactive' },
-  { id: 'emsland', name: 'Emsland', lat: 52.47, lon: 7.32, type: 'plant', status: 'inactive' },
-  // Ukraine
-  { id: 'zaporizhzhia', name: 'Zaporizhzhia NPP', lat: 47.51, lon: 34.58, type: 'plant', status: 'contested' },
-  { id: 'rivne', name: 'Rivne NPP', lat: 51.33, lon: 25.88, type: 'plant', status: 'active' },
-  { id: 'south_ukraine', name: 'South Ukraine NPP', lat: 47.81, lon: 31.22, type: 'plant', status: 'active' },
-  { id: 'khmelnytskyi', name: 'Khmelnytskyi NPP', lat: 50.30, lon: 26.65, type: 'plant', status: 'active' },
-  { id: 'chernobyl', name: 'Chernobyl', lat: 51.39, lon: 30.10, type: 'plant', status: 'inactive' },
-  // Central/Eastern Europe
-  { id: 'paks', name: 'Paks', lat: 46.57, lon: 18.86, type: 'plant', status: 'active' },
-  { id: 'temelin', name: 'Temelin', lat: 49.18, lon: 14.38, type: 'plant', status: 'active' },
-  { id: 'dukovany', name: 'Dukovany', lat: 49.09, lon: 16.15, type: 'plant', status: 'active' },
-  { id: 'mochovce', name: 'Mochovce', lat: 48.28, lon: 18.44, type: 'plant', status: 'active' },
-  { id: 'kozloduy', name: 'Kozloduy', lat: 43.75, lon: 23.63, type: 'plant', status: 'active' },
-  { id: 'cernavoda', name: 'Cernavoda', lat: 44.32, lon: 28.05, type: 'plant', status: 'active' },
-  { id: 'krsko', name: 'Krsko', lat: 45.94, lon: 15.52, type: 'plant', status: 'active' },
-  // Nordic
-  { id: 'ringhals', name: 'Ringhals', lat: 57.26, lon: 12.11, type: 'plant', status: 'active' },
-  { id: 'forsmark', name: 'Forsmark', lat: 60.41, lon: 18.17, type: 'plant', status: 'active' },
-  { id: 'oskarshamn', name: 'Oskarshamn', lat: 57.42, lon: 16.67, type: 'plant', status: 'active' },
-  { id: 'olkiluoto', name: 'Olkiluoto', lat: 61.24, lon: 21.44, type: 'plant', status: 'active' },
-  { id: 'loviisa', name: 'Loviisa', lat: 60.37, lon: 26.35, type: 'plant', status: 'active' },
-  // Benelux/Iberia
-  { id: 'borssele', name: 'Borssele', lat: 51.43, lon: 3.72, type: 'plant', status: 'active' },
-  { id: 'doel', name: 'Doel', lat: 51.33, lon: 4.26, type: 'plant', status: 'active' },
-  { id: 'tihange', name: 'Tihange', lat: 50.53, lon: 5.27, type: 'plant', status: 'active' },
-  { id: 'almaraz', name: 'Almaraz', lat: 39.81, lon: -5.70, type: 'plant', status: 'active' },
-  { id: 'cofrentes', name: 'Cofrentes', lat: 39.21, lon: -1.05, type: 'plant', status: 'active' },
-  { id: 'asco', name: 'Asco', lat: 41.20, lon: 0.57, type: 'plant', status: 'active' },
-  { id: 'vandellos', name: 'Vandellos', lat: 40.95, lon: 0.87, type: 'plant', status: 'active' },
-  { id: 'trillo', name: 'Trillo', lat: 40.70, lon: -2.62, type: 'plant', status: 'active' },
-];
 
 export const SANCTIONED_COUNTRIES: Record<number, 'severe' | 'high' | 'moderate'> = {
   408: 'severe',   // North Korea

@@ -2,7 +2,7 @@ import type { SocialUnrestEvent, MilitaryFlight, MilitaryVessel } from '@/types'
 import type { Earthquake } from '@/services/earthquakes';
 import { generateSignalId } from '@/utils/analysis-constants';
 import type { CorrelationSignalCore } from './analysis-core';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES, STRATEGIC_WATERWAYS } from '@/config/geo';
+import { INTEL_HOTSPOTS, STRATEGIC_WATERWAYS } from '@/config/geo';
 
 export type GeoEventType = 'protest' | 'military_flight' | 'military_vessel' | 'earthquake';
 
@@ -140,15 +140,6 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 
 // Reverse geocode coordinates to human-readable location
 export function getLocationName(lat: number, lon: number): string {
-  // Check conflict zones first (most relevant for convergence)
-  for (const zone of CONFLICT_ZONES) {
-    const [zoneLon, zoneLat] = zone.center;
-    const dist = haversineKm(lat, lon, zoneLat, zoneLon);
-    if (dist < 300) {
-      return zone.name.replace(' Conflict', '').replace(' Civil War', '');
-    }
-  }
-
   // Check strategic waterways
   for (const waterway of STRATEGIC_WATERWAYS) {
     const dist = haversineKm(lat, lon, waterway.lat, waterway.lon);

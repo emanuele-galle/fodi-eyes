@@ -12,11 +12,8 @@ import type {
   InternetOutage,
   RelatedAsset,
   AssetType,
-  CableAdvisory,
-  RepairShip,
   NaturalEvent,
   CyberThreat,
-  CableHealthRecord,
 } from '@/types';
 
 import type { Earthquake } from '@/services/earthquakes';
@@ -197,19 +194,6 @@ export class MapContainer {
     }
   }
 
-  public setCableActivity(advisories: CableAdvisory[], repairShips: RepairShip[]): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setCableActivity(advisories, repairShips);
-    } else {
-      this.svgMap?.setCableActivity(advisories, repairShips);
-    }
-  }
-
-  public setCableHealth(healthMap: Record<string, CableHealthRecord>): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.setCableHealth(healthMap);
-    }
-  }
 
   public setNaturalEvents(events: NaturalEvent[]): void {
     if (this.useDeckGL) {
@@ -386,35 +370,12 @@ export class MapContainer {
     }
   }
 
-  public triggerConflictClick(id: string): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.triggerConflictClick(id);
-    } else {
-      this.svgMap?.triggerConflictClick(id);
-    }
-  }
-
-  public triggerCableClick(id: string): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.triggerCableClick(id);
-    } else {
-      this.svgMap?.triggerCableClick(id);
-    }
-  }
-
   public triggerBaseClick(id: string): void {
     if (!this.useDeckGL) {
       this.svgMap?.triggerBaseClick(id);
     }
   }
 
-  public triggerNuclearClick(id: string): void {
-    if (this.useDeckGL) {
-      this.deckGLMap?.triggerNuclearClick(id);
-    } else {
-      this.svgMap?.triggerNuclearClick(id);
-    }
-  }
 
   public flashLocation(lat: number, lon: number, durationMs?: number): void {
     if (this.useDeckGL) {

@@ -1,4 +1,8 @@
-import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, NaturalEvent, CyberThreat } from '@/types';
+import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, NaturalEvent, CyberThreat } from '@/types';
+
+// Stub types for removed data (irradiators + AI datacenters)
+interface GammaIrradiator { city: string; country: string; lat: number; lon: number; }
+interface AIDataCenter { id: string; name: string; owner: string; country: string; lat: number; lon: number; chipCount: number; chipType?: string; powerMW?: number; sector?: string; status: string; note?: string; }
 import type { Earthquake } from '@/services/earthquakes';
 import type { WeatherAlert } from '@/services/weather';
 import { UNDERSEA_CABLES } from '@/config';

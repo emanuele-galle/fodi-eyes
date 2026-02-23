@@ -5,7 +5,7 @@
  */
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer, LayersList, PickingInfo } from '@deck.gl/core';
-import { GeoJsonLayer, ScatterplotLayer, PathLayer, IconLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, ScatterplotLayer, IconLayer } from '@deck.gl/layers';
 import maplibregl from 'maplibre-gl';
 import type {
   MapLayers,
@@ -14,11 +14,8 @@ import type {
   InternetOutage,
   RelatedAsset,
   AssetType,
-  CableAdvisory,
-  RepairShip,
   NaturalEvent,
   CyberThreat,
-  CableHealthRecord,
 } from '@/types';
 import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
@@ -30,13 +27,10 @@ import { getRegionColor } from '@/services/ondata';
 import { debounce, rafSchedule, getCurrentTheme } from '@/utils/index';
 import {
   INTEL_HOTSPOTS,
-  CONFLICT_ZONES,
-  UNDERSEA_CABLES,
-  NUCLEAR_FACILITIES,
-  STRATEGIC_WATERWAYS,
   ECONOMIC_CENTERS,
   APT_GROUPS,
 } from '@/config';
+import { WEBCAMS_ITALIA, type TerritorialWebcam } from '@/config/webcams-italia';
 import { MapPopup, type PopupType } from './MapPopup';
 import {
   updateHotspotEscalation,
@@ -93,10 +87,9 @@ const LIGHT_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.jso
 // Zoom thresholds for layer visibility and labels (matches old Map.ts)
 // Zoom-dependent layer visibility and labels
 const LAYER_ZOOM_THRESHOLDS: Partial<Record<keyof MapLayers, { minZoom: number; showLabels?: number }>> = {
-  nuclear: { minZoom: 3 },
-  conflicts: { minZoom: 1, showLabels: 3 },
   economic: { minZoom: 3 },
   natural: { minZoom: 1, showLabels: 2 },
+  webcams: { minZoom: 5 },
 };
 // Export for external use
 export { LAYER_ZOOM_THRESHOLDS };
@@ -110,19 +103,12 @@ function getOverlayColors() {
     hotspotElevated: [255, 165, 0, 200] as [number, number, number, number],
     hotspotLow: [255, 255, 0, 180] as [number, number, number, number],
 
-    // Conflict zone fills: more transparent in light mode
-    conflict: isLight
-      ? [255, 0, 0, 60] as [number, number, number, number]
-      : [255, 0, 0, 100] as [number, number, number, number],
+    // Webcam markers
+    webcam: isLight
+      ? [0, 120, 200, 220] as [number, number, number, number]
+      : [0, 180, 255, 200] as [number, number, number, number],
+    webcamInactive: [120, 120, 120, 150] as [number, number, number, number],
 
-    // Infrastructure/category markers: darker variants in light mode for map readability
-    nuclear: isLight
-      ? [180, 120, 0, 220] as [number, number, number, number]
-      : [255, 215, 0, 200] as [number, number, number, number],
-    cable: [0, 200, 255, 150] as [number, number, number, number],
-    cableHighlight: [255, 100, 100, 200] as [number, number, number, number],
-    cableFault: [255, 50, 50, 220] as [number, number, number, number],
-    cableDegraded: [255, 165, 0, 200] as [number, number, number, number],
     earthquake: [255, 100, 50, 200] as [number, number, number, number],
     outage: [255, 50, 50, 180] as [number, number, number, number],
     weather: [100, 150, 255, 180] as [number, number, number, number],
@@ -133,10 +119,10 @@ let COLORS = getOverlayColors();
 
 // SVG icons as data URLs for different marker shapes
 const MARKER_ICONS = {
-  // Hexagon - for nuclear
-  hexagon: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="white"/></svg>`),
   // Circle - fallback
   circle: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="white"/></svg>`),
+  // Webcam icon - video camera
+  webcam: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="9" width="18" height="14" rx="2" fill="white"/><polygon points="24,12 30,8 30,24 24,20" fill="white"/></svg>`),
 };
 
 export class DeckGLMap {
@@ -152,9 +138,6 @@ export class DeckGLMap {
   private weatherAlerts: WeatherAlert[] = [];
   private outages: InternetOutage[] = [];
   private cyberThreats: CyberThreat[] = [];
-  private cableAdvisories: CableAdvisory[] = [];
-  private repairShips: RepairShip[] = [];
-  private healthByCableId: Record<string, CableHealthRecord> = {};
   private naturalEvents: NaturalEvent[] = [];
   private firmsFireData: Array<{ lat: number; lon: number; brightness: number; frp: number; confidence: number; region: string; acq_date: string; daynight: string }> = [];
   private news: NewsItem[] = [];
@@ -174,6 +157,7 @@ export class DeckGLMap {
   private onCountryClick?: (country: CountryClickPayload) => void;
   private onLayerChange?: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void;
   private onStateChange?: (state: DeckMapState) => void;
+  private onWebcamClick?: (webcam: TerritorialWebcam) => void;
 
   // Highlighted assets
   private highlightedAssets: Record<AssetType, Set<string>> = {
@@ -195,8 +179,6 @@ export class DeckGLMap {
   private lastZoomThreshold = 0;
   private newsPulseIntervalId: ReturnType<typeof setInterval> | null = null;
   private readonly startupTime = Date.now();
-  private lastCableHighlightSignature = '';
-  private lastCableHealthSignature = '';
   private debouncedRebuildLayers: () => void;
   private rafUpdateLayers: () => void;
   private moveTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -353,9 +335,6 @@ export class DeckGLMap {
   }
 
 
-  private getSetSignature(set: Set<string>): string {
-    return [...set].sort().join('|');
-  }
 
   private hasRecentNews(now = Date.now()): boolean {
     for (const ts of this.newsLocationFirstSeen.values()) {
@@ -415,24 +394,9 @@ export class DeckGLMap {
     const filteredNaturalEvents = this.filterByTime(this.naturalEvents, (event) => event.date);
     const filteredWeatherAlerts = this.filterByTime(this.weatherAlerts, (alert) => alert.onset);
     const filteredOutages = this.filterByTime(this.outages, (outage) => outage.pubDate);
-    const filteredCableAdvisories = this.filterByTime(this.cableAdvisories, (advisory) => advisory.reported);
-
-    // Undersea cables layer
-    if (mapLayers.cables) {
-      layers.push(this.createCablesLayer());
-    } else {
-      this.layerCache.delete('cables-layer');
-    }
-
-    // Conflict zones layer
-    if (mapLayers.conflicts) {
-      layers.push(this.createConflictZonesLayer());
-    }
-
-    // Nuclear facilities layer — hidden at low zoom + ghost
-    if (mapLayers.nuclear && this.isLayerVisible('nuclear')) {
-      layers.push(this.createNuclearLayer());
-      layers.push(this.createGhostLayer('nuclear-layer', NUCLEAR_FACILITIES.filter(f => f.status !== 'decommissioned'), d => [d.lon, d.lat], { radiusMinPixels: 12 }));
+    // Webcams layer — visible at higher zoom
+    if (mapLayers.webcams && this.isLayerVisible('webcams')) {
+      layers.push(this.createWebcamsLayer());
     }
 
     // Hotspots layer (all hotspots including high/breaking, with pulse + ghost)
@@ -473,21 +437,6 @@ export class DeckGLMap {
       layers.push(this.createGhostLayer('cyber-threats-layer', this.cyberThreats, d => [d.lon, d.lat], { radiusMinPixels: 12 }));
     }
 
-    // Cable advisories layer (shown with cables)
-    if (mapLayers.cables && filteredCableAdvisories.length > 0) {
-      layers.push(this.createCableAdvisoriesLayer(filteredCableAdvisories));
-    }
-
-    // Repair ships layer (shown with cables)
-    if (mapLayers.cables && this.repairShips.length > 0) {
-      layers.push(this.createRepairShipsLayer());
-    }
-
-    // Strategic waterways layer
-    if (mapLayers.waterways) {
-      layers.push(this.createWaterwaysLayer());
-    }
-
     // Economic centers layer — hidden at low zoom
     if (mapLayers.economic && this.isLayerVisible('economic')) {
       layers.push(this.createEconomicCentersLayer());
@@ -495,11 +444,6 @@ export class DeckGLMap {
 
     // APT Groups layer (always shown, no toggle)
     layers.push(this.createAPTGroupsLayer());
-
-    // Sanctions layer (country choropleth — always on)
-    if (mapLayers.sanctions) {
-      // Sanctions rendering handled by country highlight system
-    }
 
     // Climate anomalies heatmap layer
     if (mapLayers.climate && this.climateAnomalies.length > 0) {
@@ -525,101 +469,20 @@ export class DeckGLMap {
   }
 
   // Layer creation methods
-  private createCablesLayer(): PathLayer {
-    const highlightedCables = this.highlightedAssets.cable;
-    const cacheKey = 'cables-layer';
-    const cached = this.layerCache.get(cacheKey) as PathLayer | undefined;
-    const highlightSignature = this.getSetSignature(highlightedCables);
-    const healthSignature = Object.keys(this.healthByCableId).sort().join(',');
-    if (cached && highlightSignature === this.lastCableHighlightSignature && healthSignature === this.lastCableHealthSignature) return cached;
-
-    const health = this.healthByCableId;
-    const layer = new PathLayer({
-      id: cacheKey,
-      data: UNDERSEA_CABLES,
-      getPath: (d) => d.points,
-      getColor: (d) => {
-        if (highlightedCables.has(d.id)) return COLORS.cableHighlight;
-        const h = health[d.id];
-        if (h?.status === 'fault') return COLORS.cableFault;
-        if (h?.status === 'degraded') return COLORS.cableDegraded;
-        return COLORS.cable;
-      },
-      getWidth: (d) => {
-        if (highlightedCables.has(d.id)) return 3;
-        const h = health[d.id];
-        if (h?.status === 'fault') return 2.5;
-        if (h?.status === 'degraded') return 2;
-        return 1;
-      },
-      widthMinPixels: 1,
-      widthMaxPixels: 5,
-      pickable: true,
-      updateTriggers: { highlighted: highlightSignature, health: healthSignature },
-    });
-
-    this.lastCableHighlightSignature = highlightSignature;
-    this.lastCableHealthSignature = healthSignature;
-    this.layerCache.set(cacheKey, layer);
-    return layer;
-  }
-
-  private createConflictZonesLayer(): GeoJsonLayer {
-    const cacheKey = 'conflict-zones-layer';
-
-    const geojsonData = {
-      type: 'FeatureCollection' as const,
-      features: CONFLICT_ZONES.map(zone => ({
-        type: 'Feature' as const,
-        properties: { id: zone.id, name: zone.name, intensity: zone.intensity },
-        geometry: {
-          type: 'Polygon' as const,
-          coordinates: [zone.coords],
-        },
-      })),
-    };
-
-    const layer = new GeoJsonLayer({
-      id: cacheKey,
-      data: geojsonData,
-      filled: true,
-      stroked: true,
-      getFillColor: () => COLORS.conflict,
-      getLineColor: () => getCurrentTheme() === 'light'
-        ? [255, 0, 0, 120] as [number, number, number, number]
-        : [255, 0, 0, 180] as [number, number, number, number],
-      getLineWidth: 2,
-      lineWidthMinPixels: 1,
-      pickable: true,
-    });
-    return layer;
-  }
-
-  private createNuclearLayer(): IconLayer {
-    const highlightedNuclear = this.highlightedAssets.nuclear;
-    const data = NUCLEAR_FACILITIES.filter(f => f.status !== 'decommissioned');
-
-    // Nuclear: HEXAGON icons - yellow/orange color, semi-transparent
+  private createWebcamsLayer(): IconLayer {
+    const activeWebcams = WEBCAMS_ITALIA.filter(w => w.attiva);
     return new IconLayer({
-      id: 'nuclear-layer',
-      data,
-      getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'hexagon',
-      iconAtlas: MARKER_ICONS.hexagon,
-      iconMapping: { hexagon: { x: 0, y: 0, width: 32, height: 32, mask: true } },
-      getSize: (d) => highlightedNuclear.has(d.id) ? 15 : 11,
-      getColor: (d) => {
-        if (highlightedNuclear.has(d.id)) {
-          return [255, 100, 100, 220] as [number, number, number, number];
-        }
-        if (d.status === 'contested') {
-          return [255, 50, 50, 200] as [number, number, number, number];
-        }
-        return [255, 220, 0, 200] as [number, number, number, number]; // Semi-transparent yellow
-      },
+      id: 'webcams-layer',
+      data: activeWebcams,
+      getPosition: (d: TerritorialWebcam) => [d.lon, d.lat],
+      getIcon: () => 'webcam',
+      iconAtlas: MARKER_ICONS.webcam,
+      iconMapping: { webcam: { x: 0, y: 0, width: 32, height: 32, mask: true } },
+      getSize: 12,
+      getColor: (d: TerritorialWebcam) => d.attiva ? COLORS.webcam : COLORS.webcamInactive,
       sizeScale: 1,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 15,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 18,
       pickable: true,
     });
   }
@@ -753,54 +616,6 @@ export class DeckGLMap {
     });
   }
 
-  private createCableAdvisoriesLayer(advisories: CableAdvisory[]): ScatterplotLayer {
-    // Cable fault/maintenance advisories
-    return new ScatterplotLayer({
-      id: 'cable-advisories-layer',
-      data: advisories,
-      getPosition: (d) => [d.lon, d.lat],
-      getRadius: 10000,
-      getFillColor: (d) => {
-        if (d.severity === 'fault') {
-          return [255, 50, 50, 220] as [number, number, number, number]; // Red for faults
-        }
-        return [255, 200, 0, 200] as [number, number, number, number]; // Yellow for maintenance
-      },
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
-      pickable: true,
-      stroked: true,
-      getLineColor: [0, 200, 255, 200] as [number, number, number, number], // Cyan outline (cable color)
-      lineWidthMinPixels: 2,
-    });
-  }
-
-  private createRepairShipsLayer(): ScatterplotLayer {
-    // Cable repair ships
-    return new ScatterplotLayer({
-      id: 'repair-ships-layer',
-      data: this.repairShips,
-      getPosition: (d) => [d.lon, d.lat],
-      getRadius: 8000,
-      getFillColor: [0, 255, 200, 200] as [number, number, number, number], // Teal
-      radiusMinPixels: 4,
-      radiusMaxPixels: 10,
-      pickable: true,
-    });
-  }
-
-  private createWaterwaysLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
-      id: 'waterways-layer',
-      data: STRATEGIC_WATERWAYS,
-      getPosition: (d) => [d.lon, d.lat],
-      getRadius: 10000,
-      getFillColor: [100, 150, 255, 180] as [number, number, number, number],
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
-      pickable: true,
-    });
-  }
 
   private createEconomicCentersLayer(): ScatterplotLayer {
     return new ScatterplotLayer({
@@ -1050,26 +865,14 @@ export class DeckGLMap {
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${text(obj.subtext)}</div>` };
       case 'earthquakes-layer':
         return { html: `<div class="deckgl-tooltip"><strong>M${(obj.magnitude || 0).toFixed(1)} ${t('components.deckgl.tooltip.earthquake')}</strong><br/>${text(obj.place)}</div>` };
-      case 'nuclear-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${text(obj.type)}</div>` };
-      case 'cables-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${t('components.deckgl.tooltip.underseaCable')}</div>` };
-      case 'conflict-zones-layer': {
-        const props = obj.properties || obj;
-        return { html: `<div class="deckgl-tooltip"><strong>${text(props.name)}</strong><br/>${t('components.deckgl.tooltip.conflictZone')}</div>` };
-      }
+      case 'webcams-layer':
+        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.comune)}</strong><br/>${text(obj.localita)}<br/>${text(obj.provincia)} - ${text(obj.regione)}</div>` };
       case 'natural-events-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.title)}</strong><br/>${text(obj.category || t('components.deckgl.tooltip.naturalEvent'))}</div>` };
-      case 'waterways-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${t('components.deckgl.layers.strategicWaterways')}</div>` };
       case 'economic-centers-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${text(obj.country)}</div>` };
       case 'apt-groups-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${text(obj.aka)}<br/>${t('popups.sponsor')}: ${text(obj.sponsor)}</div>` };
-      case 'cable-advisories-layer': {
-        const cableName = UNDERSEA_CABLES.find(c => c.id === obj.cableId)?.name || obj.cableId;
-        return { html: `<div class="deckgl-tooltip"><strong>${text(cableName)}</strong><br/>${text(obj.severity || t('components.deckgl.tooltip.advisory'))}<br/>${text(obj.description)}</div>` };
-      }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
       case 'weather-layer': {
@@ -1124,33 +927,27 @@ export class DeckGLMap {
 
     // Handle cluster layers with single/multi logic
     // Map layer IDs to popup types
+    // Webcams layer: emit event instead of popup
+    if (layerId === 'webcams-layer') {
+      const webcam = info.object as TerritorialWebcam;
+      if (webcam) this.onWebcamClick?.(webcam);
+      return;
+    }
+
     const layerToPopupType: Record<string, PopupType> = {
-      'conflict-zones-layer': 'conflict',
-      'nuclear-layer': 'nuclear',
-      'cables-layer': 'cable',
       'earthquakes-layer': 'earthquake',
       'weather-layer': 'weather',
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'natural-events-layer': 'natEvent',
-      'waterways-layer': 'waterway',
       'economic-centers-layer': 'economic',
       'apt-groups-layer': 'apt',
-      'cable-advisories-layer': 'cable-advisory',
-      'repair-ships-layer': 'repair-ship',
     };
 
     const popupType = layerToPopupType[layerId];
     if (!popupType) return;
 
-    // For GeoJSON layers, the data is in properties
-    let data = info.object;
-    if (layerId === 'conflict-zones-layer' && info.object.properties) {
-      // Find the full conflict zone data from config
-      const conflictId = info.object.properties.id;
-      const fullConflict = CONFLICT_ZONES.find(c => c.id === conflictId);
-      if (fullConflict) data = fullConflict;
-    }
+    const data = info.object;
 
     // Get click coordinates relative to container
     const x = info.x ?? 0;
@@ -1246,16 +1043,13 @@ export class DeckGLMap {
 
     const layerConfig = [
       { key: 'hotspots', label: t('components.deckgl.layers.intelHotspots'), icon: '&#127919;' },
-      { key: 'conflicts', label: t('components.deckgl.layers.conflictZones'), icon: '&#9876;' },
-      { key: 'nuclear', label: t('components.deckgl.layers.nuclearSites'), icon: '&#9762;' },
-      { key: 'cables', label: t('components.deckgl.layers.underseaCables'), icon: '&#128268;' },
+      { key: 'webcams', label: 'Webcam Italia', icon: '&#127909;' },
       { key: 'climate', label: t('components.deckgl.layers.climateAnomalies'), icon: '&#127787;' },
       { key: 'weather', label: t('components.deckgl.layers.weatherAlerts'), icon: '&#9928;' },
       { key: 'outages', label: t('components.deckgl.layers.internetOutages'), icon: '&#128225;' },
       { key: 'cyberThreats', label: t('components.deckgl.layers.cyberThreats'), icon: '&#128737;' },
       { key: 'natural', label: t('components.deckgl.layers.naturalEvents'), icon: '&#127755;' },
       { key: 'fires', label: t('components.deckgl.layers.fires'), icon: '&#128293;' },
-      { key: 'waterways', label: t('components.deckgl.layers.strategicWaterways'), icon: '&#9875;' },
       { key: 'economic', label: t('components.deckgl.layers.economicCenters'), icon: '&#128176;' },
     ];
 
@@ -1350,13 +1144,9 @@ export class DeckGLMap {
           helpItem(staticLabel('timeExtended'), 'timeExtended'),
         ], 'timeAffects')}
         ${helpSection('geopolitical', [
-          helpItem(label('conflictZones'), 'geoConflicts'),
           helpItem(label('intelHotspots'), 'geoHotspots'),
-          helpItem(staticLabel('sanctions'), 'geoSanctions'),
         ])}
         ${helpSection('infrastructure', [
-          helpItem(label('underseaCables'), 'infraCablesFull'),
-          helpItem(label('nuclearSites'), 'militaryNuclear'),
           helpItem(label('internetOutages'), 'infraOutages'),
           helpItem(label('cyberThreats'), 'infraCyberThreats'),
         ])}
@@ -1369,7 +1159,6 @@ export class DeckGLMap {
         ])}
         ${helpSection('labels', [
           helpItem(staticLabel('countries'), 'countriesOverlay'),
-          helpItem(label('strategicWaterways'), 'waterwaysLabels'),
         ])}
       </div>
     `;
@@ -1416,7 +1205,7 @@ export class DeckGLMap {
       { shape: shapes.circle('rgb(255, 68, 68)'), label: t('components.deckgl.legend.highAlert') },
       { shape: shapes.circle('rgb(255, 165, 0)'), label: t('components.deckgl.legend.elevated') },
       { shape: shapes.circle(isLight ? 'rgb(180, 120, 0)' : 'rgb(255, 255, 0)'), label: t('components.deckgl.legend.monitoring') },
-      { shape: shapes.hexagon(isLight ? 'rgb(180, 120, 0)' : 'rgb(255, 220, 0)'), label: t('components.deckgl.legend.nuclear') },
+      { shape: shapes.square(isLight ? 'rgb(0, 120, 200)' : 'rgb(0, 180, 255)'), label: 'Webcam' },
     ];
 
     legend.innerHTML = `
@@ -1600,16 +1389,8 @@ export class DeckGLMap {
     this.render();
   }
 
-  public setCableActivity(advisories: CableAdvisory[], repairShips: RepairShip[]): void {
-    this.cableAdvisories = advisories;
-    this.repairShips = repairShips;
-    this.render();
-  }
-
-  public setCableHealth(healthMap: Record<string, CableHealthRecord>): void {
-    this.healthByCableId = healthMap;
-    this.layerCache.delete('cables-layer');
-    this.render();
+  public setOnWebcamClick(callback: (webcam: TerritorialWebcam) => void): void {
+    this.onWebcamClick = callback;
   }
 
   public setNaturalEvents(events: NaturalEvent[]): void {
@@ -1864,38 +1645,6 @@ export class DeckGLMap {
     });
     this.popup.loadHotspotGdeltContext(hotspot);
     this.onHotspotClick?.(hotspot);
-  }
-
-  public triggerConflictClick(id: string): void {
-    const conflict = CONFLICT_ZONES.find(c => c.id === id);
-    if (conflict) {
-      // Don't pan - show popup at projected screen position or center
-      const screenPos = this.projectToScreen(conflict.center[1], conflict.center[0]);
-      const { x, y } = screenPos || this.getContainerCenter();
-      this.popup.show({ type: 'conflict', data: conflict, x, y });
-    }
-  }
-
-  public triggerCableClick(id: string): void {
-    const cable = UNDERSEA_CABLES.find(c => c.id === id);
-    if (cable && cable.points.length > 0) {
-      const midIdx = Math.floor(cable.points.length / 2);
-      const midPoint = cable.points[midIdx];
-      // Don't pan - show popup at projected screen position or center
-      const screenPos = midPoint ? this.projectToScreen(midPoint[1], midPoint[0]) : null;
-      const { x, y } = screenPos || this.getContainerCenter();
-      this.popup.show({ type: 'cable', data: cable, x, y });
-    }
-  }
-
-  public triggerNuclearClick(id: string): void {
-    const facility = NUCLEAR_FACILITIES.find(n => n.id === id);
-    if (facility) {
-      // Don't pan - show popup at projected screen position or center
-      const screenPos = this.projectToScreen(facility.lat, facility.lon);
-      const { x, y } = screenPos || this.getContainerCenter();
-      this.popup.show({ type: 'nuclear', data: facility, x, y });
-    }
   }
 
   public flashLocation(lat: number, lon: number, durationMs = 2000): void {

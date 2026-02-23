@@ -1,5 +1,5 @@
 import type { SocialUnrestEvent, MilitaryFlight, MilitaryVessel, ClusteredEvent, InternetOutage } from '@/types';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES, STRATEGIC_WATERWAYS } from '@/config/geo';
+import { INTEL_HOTSPOTS, STRATEGIC_WATERWAYS } from '@/config/geo';
 import { TIER1_COUNTRIES } from '@/config/countries';
 import { focalPointDetector } from './focal-point-detector';
 // Inline types (conflict and displacement services removed)
@@ -397,22 +397,6 @@ function trackHotspotActivity(lat: number, lon: number, weight: number = 1): voi
       if (countryCode && TIER1_COUNTRIES[countryCode]) {
         const current = hotspotActivityMap.get(countryCode) || 0;
         hotspotActivityMap.set(countryCode, current + weight);
-      }
-    }
-  }
-  for (const zone of CONFLICT_ZONES) {
-    const [zoneLon, zoneLat] = zone.center;
-    const dist = haversineKm(lat, lon, zoneLat, zoneLon);
-    if (dist < 300) {
-      const zoneCountries: Record<string, string[]> = {
-        ukraine: ['UA', 'RU'], gaza: ['IL', 'IR'], sudan: ['SA'], myanmar: ['MM'],
-      };
-      const countries = zoneCountries[zone.id] || [];
-      for (const code of countries) {
-        if (TIER1_COUNTRIES[code]) {
-          const current = hotspotActivityMap.get(code) || 0;
-          hotspotActivityMap.set(code, current + weight * 2);
-        }
       }
     }
   }

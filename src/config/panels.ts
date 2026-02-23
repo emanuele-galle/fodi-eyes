@@ -20,7 +20,6 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
   'open-data': { name: 'Open Data Italia', enabled: true, priority: 1 },
   intel: { name: 'Intelligence OSINT', enabled: true, priority: 1 },
   'risk-overview': { name: 'Panoramica Rischio', enabled: true, priority: 1 },
-  'live-webcams': { name: 'Live Webcams', enabled: true, priority: 1 },
   thinktanks: { name: 'Think Tank IT/EU', enabled: true, priority: 1 },
   politics: { name: 'News Europa', enabled: true, priority: 1 },
   tech: { name: 'Technology', enabled: true, priority: 2 },
@@ -34,42 +33,34 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
 // MAP LAYERS
 // ============================================
 export const DEFAULT_MAP_LAYERS: MapLayers = {
-  conflicts: true,
   bases: true,
-  cables: false,
   hotspots: true,
-  nuclear: true,
-  sanctions: true,
   weather: true,
   economic: true,
-  waterways: true,
   outages: true,
   cyberThreats: false,
   natural: true,
   fires: false,
   climate: false,
   italyBoundaries: true,
+  webcams: true,
 };
 
 // ============================================
 // MOBILE MAP LAYERS
 // ============================================
 export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
-  conflicts: true,
   bases: false,
-  cables: false,
   hotspots: true,
-  nuclear: false,
-  sanctions: false,
   weather: true,
   economic: false,
-  waterways: false,
   outages: true,
   cyberThreats: false,
   natural: true,
   fires: false,
   climate: false,
   italyBoundaries: false,
+  webcams: false,
 };
 
 // ============================================
