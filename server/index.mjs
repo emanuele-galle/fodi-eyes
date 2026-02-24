@@ -292,7 +292,61 @@ app.all('/api/intelligence/v1/*', (c) => c.json({ items: [], total: 0 }));
 app.all('/api/military/v1/*', (c) => c.json({ items: [], total: 0 }));
 app.all('/api/economic/v1/*', (c) => c.json({ items: [], total: 0 }));
 app.all('/api/market/v1/*', (c) => c.json({ items: [], total: 0 }));
+app.all('/api/seismology/v1/*', (c) => c.json({ items: [], total: 0 }));
+app.all('/api/wildfire/v1/*', (c) => c.json({ items: [], total: 0 }));
+app.all('/api/climate/v1/*', (c) => c.json({ items: [], total: 0 }));
+app.all('/api/infrastructure/v1/*', (c) => c.json({ items: [], total: 0 }));
+app.all('/api/news/v1/*', (c) => c.json({ items: [], total: 0 }));
 app.all('/api/data/*', (c) => c.json({ data: [] }));
+
+// YouTube Live Stream Detection
+app.get('/api/youtube/live', async (c) => {
+  const channel = c.req.query('channel');
+  if (!channel) return c.json({ error: 'Missing channel parameter' }, 400);
+
+  try {
+    const channelHandle = channel.startsWith('@') ? channel : `@${channel}`;
+    const liveUrl = `https://www.youtube.com/${channelHandle}/live`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(liveUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return c.json({ videoId: null, isLive: false });
+    }
+
+    const html = await response.text();
+
+    let videoId = null;
+    const detailsIdx = html.indexOf('"videoDetails"');
+    if (detailsIdx !== -1) {
+      const block = html.substring(detailsIdx, detailsIdx + 5000);
+      const vidMatch = block.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+      const liveMatch = block.match(/"isLive"\s*:\s*true/);
+      if (vidMatch && liveMatch) {
+        videoId = vidMatch[1];
+      }
+    }
+
+    return c.json({ videoId, isLive: videoId !== null }, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, s-maxage=300',
+      },
+    });
+  } catch (error) {
+    const isTimeout = error.name === 'AbortError';
+    return c.json({ videoId: null, isLive: false, error: isTimeout ? 'timeout' : error.message });
+  }
+});
 
 // YouTube embed proxy
 app.get('/api/youtube/embed', async (c) => {

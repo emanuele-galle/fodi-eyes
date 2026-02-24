@@ -4,12 +4,28 @@ import { escapeHtml } from '@/utils/sanitize';
 
 type TipoFilter = 'all' | TerritorialWebcam['tipo'];
 
+// Domains known to allow iframe embedding
+const EMBEDDABLE_DOMAINS = ['skylinewebcams.com', 'webcamitalia.it'];
+
+function isEmbeddable(webcam: TerritorialWebcam): boolean {
+  return EMBEDDABLE_DOMAINS.some(d => webcam.url.includes(d));
+}
+
+function getRegionList(): string[] {
+  const set = new Set<string>();
+  for (const w of WEBCAMS_ITALIA) {
+    set.add(w.regione);
+  }
+  return Array.from(set).sort();
+}
+
 export class TerritorialWebcamsPanel extends Panel {
-  private regionFilter = 'calabria';
+  private regionFilter = 'all';
   private provinciaFilter = 'all';
   private tipoFilter: TipoFilter = 'all';
   private activeWebcam: TerritorialWebcam | null = null;
   private onWebcamSelect: ((webcam: TerritorialWebcam) => void) | null = null;
+  private modalOverlay: HTMLDivElement | null = null;
 
   constructor() {
     super({ id: 'webcam-territoriali', title: 'Webcam Territoriali' });
@@ -22,7 +38,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
   private getFilteredWebcams(): TerritorialWebcam[] {
     return WEBCAMS_ITALIA.filter((w) => {
-      if (w.regione.toLowerCase() !== this.regionFilter) return false;
+      if (this.regionFilter !== 'all' && w.regione.toLowerCase() !== this.regionFilter) return false;
       if (this.provinciaFilter !== 'all' && w.provincia !== this.provinciaFilter) return false;
       if (this.tipoFilter !== 'all' && w.tipo !== this.tipoFilter) return false;
       return true;
@@ -32,7 +48,7 @@ export class TerritorialWebcamsPanel extends Panel {
   private getProvinceList(): string[] {
     const set = new Set<string>();
     for (const w of WEBCAMS_ITALIA) {
-      if (w.regione.toLowerCase() === this.regionFilter) {
+      if (this.regionFilter === 'all' || w.regione.toLowerCase() === this.regionFilter) {
         set.add(w.provincia);
       }
     }
@@ -42,60 +58,169 @@ export class TerritorialWebcamsPanel extends Panel {
   private getTipoList(): TerritorialWebcam['tipo'][] {
     const set = new Set<TerritorialWebcam['tipo']>();
     for (const w of WEBCAMS_ITALIA) {
-      if (w.regione.toLowerCase() === this.regionFilter) {
+      if (this.regionFilter === 'all' || w.regione.toLowerCase() === this.regionFilter) {
         set.add(w.tipo);
       }
     }
     return Array.from(set).sort();
   }
 
+  private openModal(webcam: TerritorialWebcam): void {
+    this.closeModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'tw-modal-overlay';
+
+    const header = document.createElement('div');
+    header.className = 'tw-modal-header';
+
+    const title = document.createElement('span');
+    title.className = 'tw-modal-title';
+    title.textContent = `${webcam.comune} - ${webcam.localita}`;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tw-modal-close';
+    closeBtn.textContent = 'Chiudi \u2715';
+    closeBtn.addEventListener('click', () => this.closeModal());
+
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    overlay.appendChild(header);
+
+    if (isEmbeddable(webcam)) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'tw-modal-iframe';
+      iframe.src = webcam.url;
+      iframe.title = `${webcam.comune} - ${webcam.localita}`;
+      iframe.allow = 'autoplay; fullscreen';
+      iframe.allowFullscreen = true;
+      iframe.setAttribute('loading', 'lazy');
+      overlay.appendChild(iframe);
+    } else {
+      const fallback = document.createElement('div');
+      fallback.className = 'tw-modal-fallback';
+      fallback.innerHTML = `
+        <p>Questa webcam non supporta l'embedding diretto.</p>
+        <a href="${escapeHtml(webcam.url)}" target="_blank" rel="noopener noreferrer">Apri webcam in nuova finestra \u2197</a>
+      `;
+      overlay.appendChild(fallback);
+    }
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) this.closeModal();
+    });
+
+    document.addEventListener('keydown', this.handleEscKey);
+    document.body.appendChild(overlay);
+    this.modalOverlay = overlay;
+  }
+
+  private handleEscKey = (e: KeyboardEvent): void => {
+    if (e.key === 'Escape') this.closeModal();
+  };
+
+  private closeModal(): void {
+    if (this.modalOverlay) {
+      document.removeEventListener('keydown', this.handleEscKey);
+      this.modalOverlay.remove();
+      this.modalOverlay = null;
+    }
+  }
+
+  private renderViewer(webcam: TerritorialWebcam): HTMLDivElement {
+    const viewer = document.createElement('div');
+    viewer.className = 'tw-viewer';
+
+    const header = document.createElement('div');
+    header.className = 'tw-viewer-header';
+
+    const title = document.createElement('span');
+    title.className = 'tw-viewer-title';
+    title.textContent = `${webcam.comune} - ${webcam.localita}`;
+
+    const expandBtn = document.createElement('button');
+    expandBtn.className = 'tw-viewer-btn';
+    expandBtn.textContent = 'Espandi';
+    expandBtn.title = 'Apri in fullscreen';
+    expandBtn.addEventListener('click', () => this.openModal(webcam));
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tw-viewer-btn';
+    closeBtn.textContent = '\u2715';
+    closeBtn.title = 'Chiudi viewer';
+    closeBtn.addEventListener('click', () => {
+      this.activeWebcam = null;
+      this.render();
+    });
+
+    header.appendChild(title);
+    header.appendChild(expandBtn);
+    header.appendChild(closeBtn);
+    viewer.appendChild(header);
+
+    if (isEmbeddable(webcam)) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'tw-viewer-iframe';
+      iframe.src = webcam.url;
+      iframe.title = `${webcam.comune} - ${webcam.localita}`;
+      iframe.allow = 'autoplay';
+      iframe.setAttribute('loading', 'lazy');
+      viewer.appendChild(iframe);
+    } else {
+      const fallback = document.createElement('div');
+      fallback.className = 'tw-viewer-fallback';
+      fallback.innerHTML = `
+        <p>Embedding non disponibile per ${escapeHtml(webcam.portale)}</p>
+        <a href="${escapeHtml(webcam.url)}" target="_blank" rel="noopener noreferrer">Apri webcam esterna \u2197</a>
+      `;
+      viewer.appendChild(fallback);
+    }
+
+    return viewer;
+  }
+
   private render(): void {
     const filtered = this.getFilteredWebcams();
     const province = this.getProvinceList();
     const tipi = this.getTipoList();
+    const regions = getRegionList();
 
     this.content.innerHTML = '';
     this.content.className = 'panel-content territorial-webcams-content';
 
-    // Active webcam preview
+    // Active webcam viewer (inline iframe)
     if (this.activeWebcam) {
-      const preview = document.createElement('div');
-      preview.className = 'tw-preview';
-
-      const previewHeader = document.createElement('div');
-      previewHeader.className = 'tw-preview-header';
-
-      const previewTitle = document.createElement('span');
-      previewTitle.className = 'tw-preview-title';
-      previewTitle.textContent = `${this.activeWebcam.comune} - ${this.activeWebcam.localita}`;
-
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'tw-preview-close';
-      closeBtn.textContent = '\u2715';
-      closeBtn.title = 'Chiudi preview';
-      closeBtn.addEventListener('click', () => {
-        this.activeWebcam = null;
-        this.render();
-      });
-
-      previewHeader.appendChild(previewTitle);
-      previewHeader.appendChild(closeBtn);
-      preview.appendChild(previewHeader);
-
-      const link = document.createElement('a');
-      link.className = 'tw-preview-link';
-      link.href = this.activeWebcam.url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.textContent = 'Apri webcam \u2197';
-      preview.appendChild(link);
-
-      this.content.appendChild(preview);
+      this.content.appendChild(this.renderViewer(this.activeWebcam));
     }
 
     // Filters toolbar
     const toolbar = document.createElement('div');
     toolbar.className = 'tw-toolbar';
+
+    // Region filter
+    const regionSelect = document.createElement('select');
+    regionSelect.className = 'tw-filter-select';
+    regionSelect.title = 'Filtra per regione';
+
+    const regionAllOpt = document.createElement('option');
+    regionAllOpt.value = 'all';
+    regionAllOpt.textContent = 'Tutte le regioni';
+    regionSelect.appendChild(regionAllOpt);
+
+    for (const region of regions) {
+      const opt = document.createElement('option');
+      opt.value = region.toLowerCase();
+      opt.textContent = region;
+      if (region.toLowerCase() === this.regionFilter) opt.selected = true;
+      regionSelect.appendChild(opt);
+    }
+
+    regionSelect.addEventListener('change', () => {
+      this.regionFilter = regionSelect.value;
+      this.provinciaFilter = 'all';
+      this.tipoFilter = 'all';
+      this.render();
+    });
 
     // Provincia filter
     const provSelect = document.createElement('select');
@@ -104,7 +229,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
     const provAllOpt = document.createElement('option');
     provAllOpt.value = 'all';
-    provAllOpt.textContent = 'Tutte le province';
+    provAllOpt.textContent = 'Province';
     provSelect.appendChild(provAllOpt);
 
     for (const prov of province) {
@@ -127,7 +252,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
     const tipoAllOpt = document.createElement('option');
     tipoAllOpt.value = 'all';
-    tipoAllOpt.textContent = 'Tutti i tipi';
+    tipoAllOpt.textContent = 'Tipi';
     tipoSelect.appendChild(tipoAllOpt);
 
     for (const tipo of tipi) {
@@ -148,6 +273,7 @@ export class TerritorialWebcamsPanel extends Panel {
     countBadge.className = 'tw-count';
     countBadge.textContent = `${filtered.length}`;
 
+    toolbar.appendChild(regionSelect);
     toolbar.appendChild(provSelect);
     toolbar.appendChild(tipoSelect);
     toolbar.appendChild(countBadge);
@@ -178,7 +304,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
       const meta = document.createElement('span');
       meta.className = 'tw-row-meta';
-      meta.textContent = escapeHtml(webcam.provincia);
+      meta.textContent = escapeHtml(`${webcam.provincia} · ${webcam.regione}`);
 
       info.appendChild(name);
       info.appendChild(meta);
@@ -187,13 +313,13 @@ export class TerritorialWebcamsPanel extends Panel {
       badges.className = 'tw-row-badges';
 
       const tipoBadge = document.createElement('span');
-      tipoBadge.className = `tw-badge tw-badge-tipo`;
+      tipoBadge.className = 'tw-badge tw-badge-tipo';
       tipoBadge.textContent = webcam.tipo;
       badges.appendChild(tipoBadge);
 
       const statusBadge = document.createElement('span');
       statusBadge.className = `tw-badge ${webcam.attiva ? 'tw-badge-online' : 'tw-badge-offline'}`;
-      statusBadge.textContent = webcam.attiva ? 'LIVE' : 'OFFLINE';
+      statusBadge.textContent = webcam.attiva ? 'LIVE' : 'OFF';
       badges.appendChild(statusBadge);
 
       row.appendChild(info);
@@ -230,6 +356,7 @@ export class TerritorialWebcamsPanel extends Panel {
   }
 
   destroy(): void {
+    this.closeModal();
     this.onWebcamSelect = null;
     super.destroy();
   }

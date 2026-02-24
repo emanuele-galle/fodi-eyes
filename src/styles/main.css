@@ -14384,6 +14384,316 @@ body.has-critical-banner .sidebar-content {
   color: var(--text-dim, #888);
 }
 
+/* ============================================================
+   Territorial Webcams Panel
+   ============================================================ */
+.tw-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.tw-filter-select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.tw-filter-select:focus {
+  border-color: var(--green, #44ff88);
+}
+
+.tw-count {
+  font-size: 9px;
+  color: var(--text-dim);
+  background: var(--overlay-medium);
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tw-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.tw-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s;
+}
+
+.tw-row:hover {
+  background: var(--surface-hover);
+}
+
+.tw-row.active {
+  background: var(--surface-active);
+  border-left: 2px solid var(--green, #44ff88);
+}
+
+.tw-row-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tw-row-name {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tw-row-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.tw-row-badges {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.tw-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.tw-badge-tipo {
+  background: var(--overlay-medium);
+  color: var(--text-secondary);
+}
+
+.tw-badge-online {
+  background: rgba(0, 255, 100, 0.15);
+  color: #44ff88;
+}
+
+.tw-badge-offline {
+  background: rgba(255, 50, 50, 0.15);
+  color: #ff4444;
+}
+
+.tw-preview {
+  padding: 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.tw-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tw-preview-title {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tw-preview-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.tw-preview-close:hover {
+  color: var(--text);
+  background: var(--overlay-medium);
+}
+
+.tw-preview-link {
+  font-size: 10px;
+  color: var(--green, #44ff88);
+  text-decoration: none;
+}
+
+.tw-preview-link:hover {
+  text-decoration: underline;
+}
+
+.tw-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+/* Webcam viewer (inline iframe) */
+.tw-viewer {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: #000;
+}
+
+.tw-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 6px;
+}
+
+.tw-viewer-title {
+  font-size: 11px;
+  color: var(--text);
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tw-viewer-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.tw-viewer-btn:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+  background: var(--overlay-light);
+}
+
+.tw-viewer-iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  display: block;
+}
+
+.tw-viewer-fallback {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.tw-viewer-fallback a {
+  color: var(--green, #44ff88);
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.tw-viewer-fallback a:hover {
+  text-decoration: underline;
+}
+
+/* Webcam modal overlay */
+.tw-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tw-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 90vw;
+  max-width: 1400px;
+  padding: 8px 0;
+}
+
+.tw-modal-title {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tw-modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.tw-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tw-modal-iframe {
+  width: 90vw;
+  max-width: 1400px;
+  height: 75vh;
+  border: 0;
+  border-radius: 4px;
+}
+
+.tw-modal-fallback {
+  color: #ccc;
+  font-size: 14px;
+  text-align: center;
+  padding: 40px;
+}
+
+.tw-modal-fallback a {
+  color: var(--green, #44ff88);
+  font-size: 16px;
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.territorial-webcams-content {
+  display: flex;
+  flex-direction: column;
+}
+
 /* ── Ultra-wide: wider sidebar ── */
 @media (min-width: 2000px) {
   .sidebar {

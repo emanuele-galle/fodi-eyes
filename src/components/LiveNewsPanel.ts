@@ -49,8 +49,14 @@ interface LiveChannel {
   useFallbackOnly?: boolean; // Skip auto-detection, always use fallback
 }
 
-// World news channels (24/7 live streams)
+// Live channels: Italian first, then international (24/7 live streams)
 const FULL_LIVE_CHANNELS: LiveChannel[] = [
+  // Italian channels
+  { id: 'skytg24', name: 'Sky TG24', handle: '@SkyTG24', fallbackVideoId: '' },
+  { id: 'rainews', name: 'Rai News', handle: '@rainabortnews', fallbackVideoId: '' },
+  { id: 'la7', name: 'La7', handle: '@La7Attualita', fallbackVideoId: '' },
+  { id: 'euronews-it', name: 'Euronews IT', handle: '@euronewsit', fallbackVideoId: '', useFallbackOnly: false },
+  // International channels
   { id: 'bloomberg', name: 'Bloomberg', handle: '@Bloomberg', fallbackVideoId: 'iEpJwprxDdk' },
   { id: 'sky', name: 'SkyNews', handle: '@SkyNews', fallbackVideoId: 'YDvsBbKfLPA' },
   { id: 'euronews', name: 'Euronews', handle: '@euabortnews', fallbackVideoId: 'pykpO5kQJ98' },
