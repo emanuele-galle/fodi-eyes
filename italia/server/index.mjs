@@ -854,9 +854,7 @@ app.get('/api/youtube/embed', async (c) => {
 // Frame proxy - serves external pages without X-Frame-Options for inline embedding
 const FRAME_PROXY_ALLOWED = new Set([
   'www.skylinewebcams.com', 'skylinewebcams.com',
-  'webcamitalia.it', 'www.webcamitalia.it',
   'meteowebcam.it', 'www.meteowebcam.it',
-  'calabriawebcam.it', 'www.calabriawebcam.it',
   'tg24.sky.it', 'video.sky.it', 'videoplatform.sky.it',
   'www.rainews.it', 'rainews.it',
   'tg.la7.it', 'www.la7.it',
