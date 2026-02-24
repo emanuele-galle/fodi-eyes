@@ -1,20 +1,94 @@
 services:
-  app:
-    build: .
+  shell:
+    build: ./shell
+    container_name: fodi-eyes-shell
     restart: unless-stopped
-    env_file: .env.local
+    depends_on:
+      italia:
+        condition: service_healthy
+      mondo:
+        condition: service_healthy
+      osint:
+        condition: service_healthy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fodi-eyes.rule=Host(`fodi-eyes.fodivps2.cloud`)"
       - "traefik.http.routers.fodi-eyes.entrypoints=websecure"
       - "traefik.http.routers.fodi-eyes.tls.certresolver=letsencrypt"
-      - "traefik.http.services.fodi-eyes.loadbalancer.server.port=3000"
+      - "traefik.http.services.fodi-eyes.loadbalancer.server.port=80"
     networks:
       - traefik-public
+      - fodi-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+
+  italia:
+    build: ./italia
+    container_name: fodi-eyes-italia
+    restart: unless-stopped
+    env_file: .env.local
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - fodi-internal
       - panel-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+
+  mondo:
+    build: ./mondo
+    container_name: fodi-eyes-mondo
+    restart: unless-stopped
+    env_file: .env.mondo
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/mondo/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fodi-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  osint:
+    build: ./osint
+    container_name: fodi-eyes-osint
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3003/api/osint/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fodi-internal
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 512M
 
 networks:
   traefik-public:
     external: true
   panel-internal:
     external: true
+  fodi-internal:
+    driver: bridge

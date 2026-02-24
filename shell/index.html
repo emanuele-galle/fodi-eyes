@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fodi Eyes - Intelligence Dashboard</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <meta name="description" content="Piattaforma di intelligence in tempo reale. Italia, Mondo, OSINT." />
+  <meta name="author" content="Fodi S.r.l." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta property="og:title" content="Fodi Eyes - Intelligence Dashboard" />
+  <meta property="og:description" content="Piattaforma di intelligence in tempo reale. Italia, Mondo, OSINT." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://fodi-eyes.fodivps2.cloud/" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --header-h: 48px;
+      --green:    #00ff41;
+      --cyan:     #4fc3f7;
+      --bg:       #0a0a0a;
+      --border:   #1a1a1a;
+      --dim:      #666;
+      --hover:    #aaa;
+      --font:     'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Consolas', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: #e0e0e0;
+      font-family: var(--font);
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────────────── */
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-h);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      z-index: 100;
+      user-select: none;
+    }
+
+    /* Left — brand */
+    #brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    #brand-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+    #brand-sep {
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    #brand-sub {
+      font-size: 9px;
+      letter-spacing: 0.22em;
+      color: var(--dim);
+      text-transform: uppercase;
+      padding-top: 1px;
+    }
+
+    /* Pulsing green dot */
+    #dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1;   box-shadow: 0 0 6px var(--green); }
+      50%       { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
+    }
+
+    /* Center — tabs */
+    #tabs {
+      display: flex;
+      align-items: stretch;
+      height: 100%;
+      gap: 0;
+    }
+
+    .tab {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 22px;
+      height: 100%;
+      font-family: var(--font);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      border-bottom: 3px solid transparent;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+
+    .tab:hover {
+      color: var(--hover);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .tab .tab-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    /* Active states */
+    .tab[data-tab="italia"].active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+    }
+
+    .tab[data-tab="mondo"].active {
+      color: var(--cyan);
+      border-bottom-color: var(--cyan);
+      text-shadow: 0 0 8px rgba(79, 195, 247, 0.5);
+    }
+
+    .tab[data-tab="osint"].active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.5);
+    }
+
+    /* Vertical separators between tabs */
+    .tab-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--border);
+      align-self: center;
+    }
+
+    /* Right — clock */
+    #clock-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #clock-label {
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: #333;
+      text-transform: uppercase;
+    }
+
+    #clock {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      color: #444;
+      min-width: 68px;
+      text-align: right;
+    }
+
+    /* ── IFRAME ──────────────────────────────────────────────────────────── */
+    #app-frame {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: calc(100vh - var(--header-h));
+      border: none;
+      background: #0d0d0d;
+      display: block;
+    }
+
+    /* ── KEYBOARD HINT ───────────────────────────────────────────────────── */
+    #kbd-hint {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: #222;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    #kbd-hint span {
+      display: inline-block;
+      border: 1px solid #1e1e1e;
+      border-radius: 3px;
+      padding: 1px 5px;
+      margin: 0 1px;
+      color: #2a2a2a;
+    }
+  </style>
+</head>
+<body>
+
+  <header id="header">
+
+    <!-- Left: brand -->
+    <div id="brand">
+      <img src="/logo-fodi.png" alt="Fodi Eyes" style="height:28px;" />
+      <div id="dot"></div>
+      <span id="brand-text">Fodi Eyes</span>
+      <div id="brand-sep"></div>
+      <span id="brand-sub">Intelligence Dashboard</span>
+    </div>
+
+    <!-- Center: tabs -->
+    <nav id="tabs" role="tablist">
+      <button class="tab active" data-tab="italia" data-src="/italia/" title="Modulo Italia (tasto 1)" role="tab" aria-selected="true">
+        <span class="tab-icon">🇮🇹</span>
+        <span>Italia</span>
+      </button>
+      <div class="tab-sep"></div>
+      <button class="tab" data-tab="mondo" data-src="/mondo/" title="Modulo Mondo (tasto 2)" role="tab" aria-selected="false">
+        <span class="tab-icon">🌍</span>
+        <span>Mondo</span>
+      </button>
+      <div class="tab-sep"></div>
+      <button class="tab" data-tab="osint" data-src="/osint/" title="Modulo OSINT (tasto 3)" role="tab" aria-selected="false">
+        <span class="tab-icon">🔍</span>
+        <span>OSINT</span>
+      </button>
+    </nav>
+
+    <!-- Right: clock -->
+    <div id="clock-wrap">
+      <span id="clock-label">CET</span>
+      <span id="clock">--:--:--</span>
+    </div>
+
+  </header>
+
+  <iframe
+    id="app-frame"
+    src="/italia/"
+    title="Fodi-Eyes App"
+    allow="clipboard-read; clipboard-write"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
+  ></iframe>
+
+  <div id="kbd-hint">
+    <span>1</span> Italia &nbsp;
+    <span>2</span> Mondo &nbsp;
+    <span>3</span> OSINT
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const frame  = document.getElementById('app-frame');
+      const tabs   = document.querySelectorAll('.tab');
+      const clock  = document.getElementById('clock');
+
+      // ── Clock ──────────────────────────────────────────────────────────
+      function updateClock() {
+        const now = new Date();
+        const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Europe/Rome' };
+        clock.textContent = now.toLocaleTimeString('it-IT', opts);
+        // Update label with actual offset
+        const offset = -now.getTimezoneOffset() / 60;
+        document.getElementById('clock-label').textContent = 'UTC' + (offset >= 0 ? '+' : '') + offset;
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // ── Tab switching ──────────────────────────────────────────────────
+      function activateTab(tab) {
+        if (!tab) return;
+
+        tabs.forEach(function (t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        frame.src = tab.dataset.src;
+      }
+
+      tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          activateTab(tab);
+        });
+      });
+
+      // ── Keyboard shortcuts ─────────────────────────────────────────────
+      document.addEventListener('keydown', function (e) {
+        // Ignore when focus is inside the iframe or an input
+        if (e.target !== document.body && e.target !== document.documentElement) return;
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+
+        const map = { '1': 'italia', '2': 'mondo', '3': 'osint' };
+        const name = map[e.key];
+        if (name) {
+          const t = document.querySelector('.tab[data-tab="' + name + '"]');
+          activateTab(t);
+        }
+      });
+    })();
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FODI EYES // OSINT SCANNER</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+<style>
+  /* ─── RESET & BASE ─────────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green:      #00ff41;
+    --green-dim:  #00aa2b;
+    --green-dark: #003d0e;
+    --green-glow: rgba(0,255,65,0.25);
+    --red:        #ff3333;
+    --yellow:     #ffcc00;
+    --cyan:       #00ccff;
+    --bg:         #000000;
+    --bg2:        #050f05;
+    --bg3:        #0a1a0a;
+    --border:     #1a3d1a;
+    --font:       'Fira Code', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── CRT SCANLINES ─────────────────────────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Vignette */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 9998;
+  }
+
+  /* ─── SCROLLBAR ─────────────────────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #000; }
+  ::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green); }
+
+  /* ─── LAYOUT ────────────────────────────────────────────────────────────── */
+  #app {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* ─── HEADER ────────────────────────────────────────────────────────────── */
+  #header {
+    border: 1px solid var(--green-dim);
+    background: var(--bg2);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+    animation: scan-line 3s linear infinite;
+  }
+
+  @keyframes scan-line {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .ascii-banner {
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--green);
+    text-shadow: 0 0 8px var(--green);
+    letter-spacing: 0.05em;
+    white-space: pre;
+    margin-bottom: 12px;
+  }
+
+  .header-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    font-size: 11px;
+    color: var(--green-dim);
+  }
+
+  #status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  .status-dot.red   { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+  .status-dot.amber { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); animation: none; }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+
+  /* ─── PANEL ─────────────────────────────────────────────────────────────── */
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    margin-bottom: 16px;
+  }
+
+  .panel-title {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title::before { content: '[ '; color: var(--green); }
+  .panel-title::after  { content: ' ]'; color: var(--green); }
+
+  .panel-body { padding: 16px; }
+
+  /* ─── INPUT SECTION ─────────────────────────────────────────────────────── */
+  .prompt-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--green-dim);
+    background: #000;
+    margin-bottom: 12px;
+    transition: box-shadow 0.2s;
+  }
+
+  .prompt-row:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 10px var(--green-glow);
+  }
+
+  .prompt-label {
+    padding: 10px 12px;
+    color: var(--green);
+    font-size: 12px;
+    white-space: nowrap;
+    background: var(--bg3);
+    border-right: 1px solid var(--border);
+    user-select: none;
+  }
+
+  .prompt-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 10px 12px;
+    caret-color: var(--green);
+  }
+
+  .prompt-input::placeholder { color: #1a4a1a; }
+
+  /* blinking cursor when focused */
+  .prompt-input:focus { animation: blink-caret 1s step-end infinite; }
+
+  /* ─── TYPE SELECTOR ─────────────────────────────────────────────────────── */
+  .select-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .select-label {
+    color: var(--green-dim);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  select {
+    background: #000;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2300aa2b' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  select:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+
+  select option { background: #050f05; color: var(--green); }
+
+  /* ─── MODULE CHECKBOXES ─────────────────────────────────────────────────── */
+  #modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .module-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    background: #000;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+    font-size: 12px;
+  }
+
+  .module-toggle:hover {
+    border-color: var(--green-dim);
+    background: var(--bg3);
+  }
+
+  .module-toggle.active {
+    border-color: var(--green);
+    background: var(--green-dark);
+  }
+
+  .module-toggle input[type="checkbox"] { display: none; }
+
+  .toggle-box {
+    font-size: 11px;
+    color: var(--green-dim);
+    white-space: nowrap;
+  }
+
+  .module-toggle.active .toggle-box { color: var(--green); }
+
+  .module-toggle.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .module-name { flex: 1; }
+
+  .module-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border: 1px solid var(--border);
+    color: var(--green-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .module-toggle.active .module-badge {
+    border-color: var(--green-dim);
+    color: var(--green);
+  }
+
+  .modules-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  /* ─── BUTTONS ───────────────────────────────────────────────────────────── */
+  .btn {
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 7px 16px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn:hover:not(:disabled) {
+    border-color: var(--green);
+    background: var(--green-dark);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    border-color: var(--green);
+    background: var(--green-dark);
+    font-size: 13px;
+    padding: 10px 24px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #005012;
+    box-shadow: 0 0 14px var(--green-glow), 0 0 4px var(--green);
+  }
+
+  .btn-sm {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  .btn-danger {
+    border-color: #550000;
+    color: var(--red);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    border-color: var(--red);
+    background: #1a0000;
+    box-shadow: 0 0 8px rgba(255,51,51,0.25);
+  }
+
+  /* ─── EXECUTE ROW ───────────────────────────────────────────────────────── */
+  #execute-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  #scan-count {
+    font-size: 11px;
+    color: var(--green-dim);
+  }
+
+  /* ─── PROGRESS ──────────────────────────────────────────────────────────── */
+  #progress-panel { display: none; }
+
+  #progress-log {
+    font-size: 11px;
+    line-height: 1.8;
+    max-height: 200px;
+    overflow-y: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .log-line {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    animation: fade-in 0.3s ease;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(3px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .log-ts    { color: #006618; white-space: nowrap; }
+  .log-msg   { color: var(--green-dim); }
+  .log-ok    { color: var(--green); }
+  .log-warn  { color: var(--yellow); }
+  .log-err   { color: var(--red); }
+  .log-info  { color: var(--cyan); }
+
+  .progress-bar-wrap {
+    height: 3px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    margin: 10px 0;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ─── RESULTS ───────────────────────────────────────────────────────────── */
+  #results-panel { display: none; }
+
+  .result-summary {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    font-size: 11px;
+    color: var(--green-dim);
+  }
+
+  .result-summary span { white-space: nowrap; }
+  .result-summary strong { color: var(--green); }
+
+  .module-result {
+    border: 1px solid var(--border);
+    background: #000;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+
+  .module-result:hover { border-color: #2a5a2a; }
+
+  .module-result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--bg3);
+    transition: background 0.15s;
+  }
+
+  .module-result-header:hover { background: var(--bg2); }
+
+  .collapse-arrow { color: var(--green-dim); font-size: 10px; transition: transform 0.2s; }
+  .module-result.open .collapse-arrow { transform: rotate(90deg); }
+
+  .mod-status-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border: 1px solid;
+    letter-spacing: 0.05em;
+  }
+
+  .status-success { color: var(--green);  border-color: var(--green);  }
+  .status-partial { color: var(--yellow); border-color: var(--yellow); }
+  .status-error   { color: var(--red);    border-color: var(--red);    }
+
+  .mod-duration { font-size: 10px; color: #006618; margin-left: auto; }
+
+  .module-result-body {
+    display: none;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    max-height: 350px;
+    overflow-y: auto;
+  }
+
+  .module-result.open .module-result-body { display: block; }
+
+  .kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .kv-table tr { border-bottom: 1px solid #0a1a0a; }
+  .kv-table tr:last-child { border-bottom: none; }
+
+  .kv-table td {
+    padding: 3px 8px;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  .kv-table td:first-child {
+    color: #00aa2b;
+    white-space: nowrap;
+    width: 35%;
+    font-size: 10px;
+    padding-right: 16px;
+  }
+
+  .kv-table td:last-child { color: var(--green); word-break: break-all; }
+
+  .kv-array-item {
+    display: block;
+    padding: 1px 0;
+    border-bottom: 1px dashed #0a1a0a;
+  }
+
+  .kv-array-item:last-child { border-bottom: none; }
+
+  .error-msg {
+    color: var(--red);
+    font-size: 11px;
+    padding: 4px 0;
+  }
+
+  .no-data { color: #1a4a1a; font-size: 11px; font-style: italic; }
+
+  /* ─── RELATIONSHIPS ─────────────────────────────────────────────────────── */
+  #relationships-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .rel-title {
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .rel-item {
+    font-size: 11px;
+    color: var(--green-dim);
+    padding: 2px 0;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+  }
+
+  .rel-src  { color: var(--cyan); }
+  .rel-type { color: var(--green-dim); font-size: 10px; letter-spacing: 0.1em; }
+  .rel-tgt  { color: var(--green); }
+
+  /* ─── EXPORT BUTTONS ────────────────────────────────────────────────────── */
+  #export-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── HISTORY ───────────────────────────────────────────────────────────── */
+  #history-panel { display: none; }
+
+  #history-list {
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bg3);
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-wrap: wrap;
+  }
+
+  .history-item:hover { background: var(--bg3); }
+  .history-item:last-child { border-bottom: none; }
+
+  .hist-target {
+    color: var(--green);
+    flex: 1;
+    font-size: 12px;
+    min-width: 120px;
+  }
+
+  .hist-time  { color: #006618; white-space: nowrap; }
+  .hist-type  { color: var(--cyan); font-size: 10px; letter-spacing: 0.05em; }
+  .hist-status { font-size: 10px; }
+
+  /* ─── TYPEWRITER ────────────────────────────────────────────────────────── */
+  @keyframes typing {
+    from { width: 0; }
+    to   { width: 100%; }
+  }
+
+  @keyframes blink-caret {
+    50% { border-right-color: transparent; }
+  }
+
+  /* ─── FOOTER ────────────────────────────────────────────────────────────── */
+  #footer {
+    text-align: center;
+    font-size: 10px;
+    color: #003d0e;
+    padding-top: 30px;
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── RESPONSIVE ────────────────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .ascii-banner  { font-size: 7px; }
+    #modules-grid  { grid-template-columns: 1fr 1fr; }
+    .header-meta   { flex-direction: column; align-items: flex-start; }
+    .result-summary { flex-direction: column; gap: 4px; }
+  }
+
+  @media (max-width: 420px) {
+    .ascii-banner     { display: none; }
+    #modules-grid     { grid-template-columns: 1fr; }
+    .kv-table td:first-child { width: 42%; }
+  }
+
+  /* ─── MISC ──────────────────────────────────────────────────────────────── */
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .dim { color: var(--green-dim); }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .yellow { color: var(--yellow); }
+  .cyan  { color: var(--cyan); }
+
+  hr.sep {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+  }
+
+  /* Flicker animation on header */
+  @keyframes flicker {
+    0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+      text-shadow: 0 0 8px var(--green), 0 0 20px var(--green-glow);
+    }
+    20%, 24%, 55% { text-shadow: none; }
+  }
+
+  .ascii-banner { animation: flicker 8s linear infinite; }
+
+  /* Running shimmer on progress bar */
+  @keyframes shimmer {
+    0%   { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+
+  .progress-bar-fill.running {
+    background: linear-gradient(
+      90deg,
+      var(--green-dim) 0%,
+      var(--green) 50%,
+      var(--green-dim) 100%
+    );
+    background-size: 200%;
+    animation: shimmer 1.5s linear infinite;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <pre class="ascii-banner">
+ ███████╗ ██████╗ ██████╗ ██╗    ███████╗██╗   ██╗███████╗███████╗
+ ██╔════╝██╔═══██╗██╔══██╗██║    ██╔════╝╚██╗ ██╔╝██╔════╝██╔════╝
+ █████╗  ██║   ██║██║  ██║██║    █████╗   ╚████╔╝ █████╗  ███████╗
+ ██╔══╝  ██║   ██║██║  ██║██║    ██╔══╝    ╚██╔╝  ██╔══╝  ╚════██║
+ ██║     ╚██████╔╝██████╔╝██║    ███████╗   ██║   ███████╗███████║
+ ╚═╝      ╚═════╝ ╚═════╝ ╚═╝    ╚══════╝   ╚═╝   ╚══════╝╚══════╝
+                          ░░  O S I N T  S C A N N E R  ░░ v1.0</pre>
+    <div class="header-meta">
+      <span><span class="dim">SYS:</span> <span class="green">ONLINE</span> &nbsp;|&nbsp; <span class="dim">TARGET:</span> ANY &nbsp;|&nbsp; <span class="dim">MODULES:</span> <span id="module-count-label" class="green">–</span></span>
+      <div id="status-indicator">
+        <div class="status-dot" id="sys-dot"></div>
+        <span id="sys-status-text" class="dim">READY</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCAN CONFIG PANEL -->
+  <div class="panel">
+    <div class="panel-title">SCAN CONFIGURATION</div>
+    <div class="panel-body">
+
+      <!-- TARGET INPUT -->
+      <div class="prompt-row">
+        <span class="prompt-label">root@fodi:~#&nbsp;</span>
+        <input
+          type="text"
+          id="target-input"
+          class="prompt-input"
+          placeholder="target: domain.com / 1.2.3.4 / user@email.com / @username"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <!-- TYPE SELECTOR -->
+      <div class="select-row">
+        <span class="select-label">TARGET TYPE&nbsp;</span>
+        <select id="type-select">
+          <option value="">AUTO DETECT</option>
+          <option value="domain">DOMAIN</option>
+          <option value="ip">IP ADDRESS</option>
+          <option value="email">EMAIL</option>
+          <option value="username">USERNAME</option>
+        </select>
+        <span id="auto-type-hint" class="dim" style="font-size:11px;"></span>
+      </div>
+
+      <!-- MODULES -->
+      <div class="panel-title" style="margin: 0 -16px; padding: 6px 14px; font-size:10px;">SELECT MODULES</div>
+      <div style="height:10px;"></div>
+
+      <div class="modules-controls">
+        <button class="btn btn-sm" id="select-all-btn">[ SELECT ALL ]</button>
+        <button class="btn btn-sm" id="select-none-btn">[ SELECT NONE ]</button>
+        <button class="btn btn-sm" id="select-auto-btn">[ AUTO FOR TYPE ]</button>
+        <span class="dim" style="font-size:11px;margin-left:auto;" id="selected-count">0 selected</span>
+      </div>
+
+      <div id="modules-grid">
+        <div class="dim" style="font-size:11px;">Loading modules...</div>
+      </div>
+
+      <hr class="sep">
+
+      <!-- EXECUTE -->
+      <div id="execute-row">
+        <button class="btn btn-primary" id="scan-btn" disabled>
+          &gt; EXECUTE SCAN
+        </button>
+        <button class="btn btn-danger btn-sm" id="abort-btn" disabled style="display:none;">
+          [ ABORT ]
+        </button>
+        <span id="scan-count" class="dim"></span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PROGRESS PANEL -->
+  <div class="panel" id="progress-panel">
+    <div class="panel-title">SCAN PROGRESS</div>
+    <div class="panel-body">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill running" id="progress-bar" style="width:0%"></div>
+      </div>
+      <div id="progress-log"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS PANEL -->
+  <div class="panel" id="results-panel">
+    <div class="panel-title">SCAN RESULTS</div>
+    <div class="panel-body">
+
+      <div class="result-summary" id="result-summary"></div>
+
+      <div id="module-results"></div>
+
+      <div id="relationships-section" style="display:none;">
+        <div class="rel-title">RELATIONSHIPS GRAPH</div>
+        <div id="relationships-list"></div>
+      </div>
+
+      <div id="export-row">
+        <span class="dim" style="font-size:11px;align-self:center;">EXPORT:</span>
+        <button class="btn btn-sm" id="export-json-btn">[ .JSON ]</button>
+        <button class="btn btn-sm" id="export-csv-btn">[ .CSV  ]</button>
+        <button class="btn btn-sm" id="new-scan-btn" style="margin-left:auto;">[ NEW SCAN ]</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel" id="history-panel">
+    <div class="panel-title">SCAN HISTORY</div>
+    <div class="panel-body" style="padding:0;">
+      <div id="history-list"></div>
+      <div style="padding:8px 12px; border-top:1px solid var(--border); text-align:right;">
+        <button class="btn btn-sm btn-danger" id="clear-history-btn">[ CLEAR HISTORY ]</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer">FODI EYES // OSINT SCANNER &nbsp;|&nbsp; FOR AUTHORIZED USE ONLY &nbsp;|&nbsp; &copy; 2026 FODISRL</div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   FODI EYES — OSINT SCANNER FRONTEND
+   Pure vanilla JS, no dependencies.
+═══════════════════════════════════════════════════════════════════════════ */
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+const state = {
+  modules:     [],          // available modules from API
+  scanId:      null,        // current scan UUID
+  scanning:    false,       // polling active
+  pollTimer:   null,        // setInterval handle
+  currentScan: null,        // last full ScanResult
+  abortCtrl:   null,        // AbortController for fetch
+};
+
+const HISTORY_KEY  = 'fodi_eyes_history';
+const MAX_HISTORY  = 20;
+const POLL_INTERVAL = 1500;
+
+// ── DOM REFS ───────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const targetInput   = $('target-input');
+const typeSelect    = $('type-select');
+const autoTypeHint  = $('auto-type-hint');
+const modulesGrid   = $('modules-grid');
+const selectedCount = $('selected-count');
+const scanBtn       = $('scan-btn');
+const abortBtn      = $('abort-btn');
+const scanCountEl   = $('scan-count');
+const progressPanel = $('progress-panel');
+const progressLog   = $('progress-log');
+const progressBar   = $('progress-bar');
+const resultsPanel  = $('results-panel');
+const resultSummary = $('result-summary');
+const moduleResults = $('module-results');
+const historyPanel  = $('history-panel');
+const historyList   = $('history-list');
+
+// ── UTILITIES ──────────────────────────────────────────────────────────────
+function ts() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `[${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}]`;
+}
+
+function formatDuration(ms) {
+  if (ms < 1000) return ms + 'ms';
+  return (ms / 1000).toFixed(1) + 's';
+}
+
+function relativeTime(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60)  return s + 's ago';
+  const m = Math.floor(s / 60);
+  if (m < 60)  return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24)  return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+
+function detectType(val) {
+  if (!val) return '';
+  if (val.includes('@'))                         return 'email';
+  if (/^[\d.:]+$/.test(val))                    return 'ip';
+  if (/^[a-zA-Z0-9._-]+$/.test(val) && !val.includes('.')) return 'username';
+  if (val.includes('.'))                         return 'domain';
+  return '';
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function addLog(msg, cls = 'log-msg') {
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${ts()}</span><span class="${cls}">${escapeHtml(msg)}</span>`;
+  progressLog.appendChild(line);
+  progressLog.scrollTop = progressLog.scrollHeight;
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────────────
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveHistory(items) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, MAX_HISTORY)));
+}
+
+function addToHistory(scan) {
+  const history = loadHistory();
+  // Remove duplicate by id
+  const filtered = history.filter(h => h.id !== scan.id);
+  filtered.unshift({
+    id:          scan.id,
+    target:      scan.target.value,
+    type:        scan.target.type,
+    status:      scan.status,
+    startedAt:   scan.startedAt,
+    completedAt: scan.completedAt,
+    moduleCount: scan.modules.length,
+  });
+  saveHistory(filtered);
+  renderHistory();
+}
+
+function renderHistory() {
+  const history = loadHistory();
+  if (history.length === 0) {
+    historyPanel.style.display = 'none';
+    return;
+  }
+  historyPanel.style.display = '';
+  historyList.innerHTML = '';
+  history.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const statusClass = h.status === 'completed' ? 'green' : h.status === 'error' ? 'red' : 'yellow';
+    item.innerHTML = `
+      <span class="hist-target">${escapeHtml(h.target)}</span>
+      <span class="hist-type">${h.type.toUpperCase()}</span>
+      <span class="hist-status ${statusClass}">${h.status.toUpperCase()}</span>
+      <span class="hist-time dim">${relativeTime(h.startedAt)}</span>
+      <span class="dim">${h.moduleCount} modules</span>
+    `;
+    item.title = `Click to reload scan ${h.id}`;
+    item.addEventListener('click', () => loadScanById(h.id));
+    historyList.appendChild(item);
+  });
+}
+
+async function loadScanById(id) {
+  try {
+    const r = await fetch(`/api/osint/scan/${id}`);
+    if (!r.ok) { addLog('Scan not found in server (may have expired)', 'log-warn'); return; }
+    const scan = await r.json();
+    state.currentScan = scan;
+    renderResults(scan);
+  } catch (e) {
+    addLog('Failed to reload scan: ' + e.message, 'log-err');
+  }
+}
+
+// ── MODULES ────────────────────────────────────────────────────────────────
+async function loadModules() {
+  try {
+    const r = await fetch('/api/osint/modules');
+    const data = await r.json();
+    state.modules = data.modules || [];
+    $('module-count-label').textContent = state.modules.length;
+    renderModules();
+    updateSelectedCount();
+    scanBtn.disabled = false;
+    setSysStatus('READY', 'green');
+  } catch (e) {
+    modulesGrid.innerHTML = `<span class="red">Error loading modules: ${escapeHtml(e.message)}</span>`;
+    setSysStatus('ERROR', 'red');
+  }
+}
+
+function renderModules(filterType = null) {
+  modulesGrid.innerHTML = '';
+  state.modules.forEach(mod => {
+    const compatible = !filterType || mod.targetTypes.includes(filterType);
+    const label = document.createElement('label');
+    label.className = 'module-toggle' + (compatible ? ' active' : ' disabled');
+    label.dataset.id = mod.id;
+    const cbId = 'mod_' + mod.id;
+    label.innerHTML = `
+      <input type="checkbox" id="${cbId}" ${compatible ? 'checked' : ''} ${!compatible ? 'disabled' : ''}>
+      <span class="toggle-box">${compatible ? '[x]' : '[ ]'}</span>
+      <span class="module-name" title="${escapeHtml(mod.description)}">${escapeHtml(mod.name)}</span>
+      <span class="module-badge">${mod.targetTypes.map(t=>t.slice(0,3).toUpperCase()).join('/')}</span>
+    `;
+    if (compatible) {
+      label.addEventListener('change', () => {
+        const cb = label.querySelector('input');
+        label.classList.toggle('active', cb.checked);
+        label.querySelector('.toggle-box').textContent = cb.checked ? '[x]' : '[ ]';
+        updateSelectedCount();
+      });
+    }
+    modulesGrid.appendChild(label);
+  });
+  updateSelectedCount();
+}
+
+function getSelectedModules() {
+  return [...modulesGrid.querySelectorAll('input[type=checkbox]:checked')]
+    .map(cb => cb.id.replace('mod_', ''));
+}
+
+function updateSelectedCount() {
+  const n = getSelectedModules().length;
+  selectedCount.textContent = n + ' selected';
+}
+
+function setSysStatus(text, color = '') {
+  const dot  = $('sys-dot');
+  const span = $('sys-status-text');
+  span.textContent = text;
+  span.className = color;
+  dot.className = 'status-dot' + (color === 'red' ? ' red' : color === 'amber' ? ' amber' : '');
+}
+
+// ── TARGET AUTO-DETECT ─────────────────────────────────────────────────────
+targetInput.addEventListener('input', () => {
+  const t = detectType(targetInput.value.trim());
+  if (t && typeSelect.value === '') {
+    autoTypeHint.textContent = '→ detected: ' + t.toUpperCase();
+  } else {
+    autoTypeHint.textContent = '';
+  }
+});
+
+// ── MODULE CONTROLS ────────────────────────────────────────────────────────
+$('select-all-btn').addEventListener('click', () => {
+  modulesGrid.querySelectorAll('input:not(:disabled)').forEach(cb => {
+    cb.checked = true;
+    cb.closest('label').classList.add('active');
+    cb.closest('label').querySelector('.toggle-box').textContent = '[x]';
+  });
+  updateSelectedCount();
+});
+
+$('select-none-btn').addEventListener('click', () => {
+  modulesGrid.querySelectorAll('input:not(:disabled)').forEach(cb => {
+    cb.checked = false;
+    cb.closest('label').classList.remove('active');
+    cb.closest('label').querySelector('.toggle-box').textContent = '[ ]';
+  });
+  updateSelectedCount();
+});
+
+$('select-auto-btn').addEventListener('click', () => {
+  const t = typeSelect.value || detectType(targetInput.value.trim());
+  renderModules(t || null);
+});
+
+typeSelect.addEventListener('change', () => {
+  const t = typeSelect.value;
+  autoTypeHint.textContent = '';
+  if (t) renderModules(t);
+  else renderModules(null);
+});
+
+// ── SCAN ───────────────────────────────────────────────────────────────────
+scanBtn.addEventListener('click', startScan);
+targetInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !scanBtn.disabled) startScan(); });
+
+async function startScan() {
+  const target = targetInput.value.trim();
+  if (!target) {
+    addLog('ERROR: target cannot be empty', 'log-err');
+    progressPanel.style.display = '';
+    return;
+  }
+
+  const type   = typeSelect.value || detectType(target) || undefined;
+  const mods   = getSelectedModules();
+  if (mods.length === 0) {
+    addLog('ERROR: select at least one module', 'log-err');
+    progressPanel.style.display = '';
+    return;
+  }
+
+  // Reset UI
+  progressLog.innerHTML = '';
+  moduleResults.innerHTML = '';
+  resultSummary.innerHTML = '';
+  $('relationships-section').style.display = 'none';
+  progressPanel.style.display = '';
+  resultsPanel.style.display  = 'none';
+  progressBar.style.width = '0%';
+  progressBar.classList.add('running');
+  setSysStatus('SCANNING', 'amber');
+  scanBtn.disabled = true;
+  abortBtn.style.display = '';
+  abortBtn.disabled = false;
+  state.scanning = true;
+
+  addLog(`Initiating scan → target: ${target}`, 'log-info');
+  addLog(`Type: ${type || 'auto'} | Modules: ${mods.length}`, 'log-msg');
+  addLog('─'.repeat(48), 'log-ts');
+
+  state.abortCtrl = new AbortController();
+
+  try {
+    const r = await fetch('/api/osint/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target, type, modules: mods }),
+      signal: state.abortCtrl.signal,
+    });
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ error: r.statusText }));
+      throw new Error(err.error || r.statusText);
+    }
+
+    const { id } = await r.json();
+    state.scanId = id;
+    addLog(`Scan ID: ${id}`, 'log-ts');
+    addLog('Running modules...', 'log-msg');
+
+    startPolling(id, mods.length);
+
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      addLog('Scan aborted by user.', 'log-warn');
+    } else {
+      addLog('FATAL: ' + e.message, 'log-err');
+    }
+    resetScanUI();
+  }
+}
+
+let lastModuleCount = 0;
+
+function startPolling(scanId, totalMods) {
+  lastModuleCount = 0;
+  state.pollTimer = setInterval(() => pollScan(scanId, totalMods), POLL_INTERVAL);
+}
+
+async function pollScan(scanId, totalMods) {
+  try {
+    const r = await fetch(`/api/osint/scan/${scanId}`);
+    if (!r.ok) {
+      clearInterval(state.pollTimer);
+      addLog('Poll error: ' + r.status, 'log-err');
+      resetScanUI();
+      return;
+    }
+    const scan = await r.json();
+
+    // Log newly completed modules
+    const newMods = scan.modules.slice(lastModuleCount);
+    newMods.forEach(mod => {
+      const cls = mod.status === 'success' ? 'log-ok' :
+                  mod.status === 'partial' ? 'log-warn' : 'log-err';
+      const tag = mod.status === 'success' ? 'OK' :
+                  mod.status === 'partial' ? 'PARTIAL' : 'ERROR';
+      addLog(`${mod.name.padEnd(22)} ${tag.padStart(7)} (${formatDuration(mod.duration)})`, cls);
+    });
+    lastModuleCount = scan.modules.length;
+
+    // Update progress bar
+    const pct = totalMods > 0 ? Math.round((scan.modules.length / totalMods) * 100) : 0;
+    progressBar.style.width = pct + '%';
+
+    if (scan.status !== 'running') {
+      clearInterval(state.pollTimer);
+      state.pollTimer = null;
+      progressBar.style.width = '100%';
+      progressBar.classList.remove('running');
+
+      const elapsed = scan.completedAt
+        ? ((new Date(scan.completedAt) - new Date(scan.startedAt)) / 1000).toFixed(1)
+        : '?';
+      addLog('─'.repeat(48), 'log-ts');
+      addLog(`Scan complete in ${elapsed}s. Status: ${scan.status.toUpperCase()}`,
+             scan.status === 'error' ? 'log-err' : 'log-ok');
+
+      state.currentScan = scan;
+      renderResults(scan);
+      addToHistory(scan);
+      resetScanUI();
+    }
+  } catch (e) {
+    clearInterval(state.pollTimer);
+    addLog('Poll failed: ' + e.message, 'log-err');
+    resetScanUI();
+  }
+}
+
+function resetScanUI() {
+  state.scanning = false;
+  scanBtn.disabled = false;
+  abortBtn.disabled = true;
+  abortBtn.style.display = 'none';
+  setSysStatus('READY', 'green');
+}
+
+abortBtn.addEventListener('click', () => {
+  if (state.abortCtrl) state.abortCtrl.abort();
+  // Propagate abort to server
+  if (state.scanId) {
+    fetch('/api/osint/scan/' + state.scanId, { method: 'DELETE' }).catch(() => {});
+  }
+  if (state.pollTimer) clearInterval(state.pollTimer);
+  addLog('Aborting scan...', 'log-warn');
+  resetScanUI();
+});
+
+// ── RESULTS ────────────────────────────────────────────────────────────────
+function renderResults(scan) {
+  resultsPanel.style.display = '';
+
+  // Summary bar
+  const ok  = scan.modules.filter(m => m.status === 'success').length;
+  const par = scan.modules.filter(m => m.status === 'partial').length;
+  const err = scan.modules.filter(m => m.status === 'error').length;
+  const elapsed = scan.completedAt
+    ? ((new Date(scan.completedAt) - new Date(scan.startedAt)) / 1000).toFixed(1)
+    : '?';
+  resultSummary.innerHTML = `
+    <span>TARGET: <strong>${escapeHtml(scan.target.value)}</strong></span>
+    <span>TYPE: <strong>${scan.target.type.toUpperCase()}</strong></span>
+    <span>MODULES: <strong class="green">${ok} OK</strong> / <span class="yellow">${par} PARTIAL</span> / <span class="red">${err} ERROR</span></span>
+    <span>DURATION: <strong>${elapsed}s</strong></span>
+    <span>SCAN ID: <strong style="font-size:10px;">${scan.id}</strong></span>
+  `;
+
+  // Module results
+  moduleResults.innerHTML = '';
+  scan.modules.forEach(mod => {
+    moduleResults.appendChild(buildModuleCard(mod));
+  });
+
+  // Relationships
+  if (scan.relationships && scan.relationships.length > 0) {
+    $('relationships-section').style.display = '';
+    const list = $('relationships-list');
+    list.innerHTML = '';
+    scan.relationships.forEach(rel => {
+      const d = document.createElement('div');
+      d.className = 'rel-item';
+      d.innerHTML = `
+        <span class="rel-src">${escapeHtml(rel.source)}</span>
+        <span class="rel-type">─[${escapeHtml(rel.type)}]→</span>
+        <span class="rel-tgt">${escapeHtml(rel.target)}</span>
+        ${rel.label ? `<span class="dim">(${escapeHtml(rel.label)})</span>` : ''}
+      `;
+      list.appendChild(d);
+    });
+  }
+
+  // Scroll to results
+  resultsPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function buildModuleCard(mod) {
+  const card = document.createElement('div');
+  card.className = 'module-result open';
+
+  const statusClass = 'status-' + mod.status;
+  const header = document.createElement('div');
+  header.className = 'module-result-header';
+  header.innerHTML = `
+    <span class="collapse-arrow">▶</span>
+    <strong>${escapeHtml(mod.name)}</strong>
+    <span class="mod-status-badge ${statusClass}">${mod.status.toUpperCase()}</span>
+    <span class="mod-duration">${formatDuration(mod.duration)}</span>
+  `;
+  header.addEventListener('click', () => {
+    card.classList.toggle('open');
+  });
+
+  const body = document.createElement('div');
+  body.className = 'module-result-body';
+
+  if (mod.status === 'error' && mod.error) {
+    body.innerHTML = `<div class="error-msg">ERROR: ${escapeHtml(mod.error)}</div>`;
+  } else if (!mod.data || Object.keys(mod.data).length === 0) {
+    body.innerHTML = `<div class="no-data">// no data returned</div>`;
+  } else {
+    body.appendChild(buildKvTable(mod.data));
+  }
+
+  card.appendChild(header);
+  card.appendChild(body);
+  return card;
+}
+
+function buildKvTable(data, depth = 0) {
+  const table = document.createElement('table');
+  table.className = 'kv-table';
+
+  for (const [key, val] of Object.entries(data)) {
+    const tr = document.createElement('tr');
+    const tdKey = document.createElement('td');
+    const tdVal = document.createElement('td');
+
+    tdKey.textContent = key;
+
+    if (Array.isArray(val)) {
+      if (val.length === 0) {
+        tdVal.innerHTML = '<span class="no-data">[]</span>';
+      } else if (typeof val[0] === 'object' && val[0] !== null) {
+        // Array of objects - render each as nested table
+        val.forEach((item, i) => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'margin-bottom:4px;border-left:2px solid var(--border);padding-left:8px;';
+          if (val.length > 1) {
+            const idx = document.createElement('div');
+            idx.style.cssText = 'font-size:10px;color:#006618;';
+            idx.textContent = `[${i}]`;
+            wrap.appendChild(idx);
+          }
+          wrap.appendChild(buildKvTable(item, depth + 1));
+          tdVal.appendChild(wrap);
+        });
+      } else {
+        // Array of primitives
+        val.forEach(v => {
+          const s = document.createElement('span');
+          s.className = 'kv-array-item';
+          s.textContent = String(v);
+          tdVal.appendChild(s);
+        });
+      }
+    } else if (val !== null && typeof val === 'object') {
+      tdVal.appendChild(buildKvTable(val, depth + 1));
+    } else {
+      const s = String(val ?? '');
+      // Detect URLs
+      if (/^https?:\/\//i.test(s)) {
+        tdVal.innerHTML = `<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(s)}</a>`;
+      } else if (s === 'true' || s === 'false') {
+        tdVal.innerHTML = `<span class="${s === 'true' ? 'green' : 'red'}">${s}</span>`;
+      } else if (s === '') {
+        tdVal.innerHTML = `<span class="no-data">-</span>`;
+      } else {
+        tdVal.textContent = s;
+      }
+    }
+
+    tr.appendChild(tdKey);
+    tr.appendChild(tdVal);
+    table.appendChild(tr);
+  }
+  return table;
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────────
+function exportScan(format) {
+  if (!state.currentScan) return;
+  const url = `/api/osint/export/${state.currentScan.id}?format=${format}`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `osint-scan-${state.currentScan.id}.${format}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  addLog(`Exporting scan as .${format.toUpperCase()}...`, 'log-info');
+}
+
+$('export-json-btn').addEventListener('click', () => exportScan('json'));
+$('export-csv-btn').addEventListener('click',  () => exportScan('csv'));
+
+$('new-scan-btn').addEventListener('click', () => {
+  resultsPanel.style.display  = 'none';
+  progressPanel.style.display = 'none';
+  targetInput.value = '';
+  autoTypeHint.textContent = '';
+  targetInput.focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ── HISTORY CONTROLS ───────────────────────────────────────────────────────
+$('clear-history-btn').addEventListener('click', () => {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+});
+
+// ── SCAN COUNT DISPLAY ─────────────────────────────────────────────────────
+function updateScanCount() {
+  const history = loadHistory();
+  if (history.length > 0) {
+    scanCountEl.textContent = history.length + ' scan' + (history.length !== 1 ? 's' : '') + ' in history';
+  }
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+async function init() {
+  setSysStatus('CONNECTING...', 'amber');
+  await loadModules();
+  renderHistory();
+  updateScanCount();
+
+  // Check API health
+  try {
+    const r = await fetch('/api/osint/health');
+    const h = await r.json();
+    addLog('API health check: ' + h.status, 'log-ok');
+    progressPanel.style.display = '';
+  } catch {
+    // silent
+  }
+  progressPanel.style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>

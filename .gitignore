@@ -5,6 +5,10 @@ dist/
 *.log
 .env
 .env.local
+.env.mondo
+.env.osint
+.env.*
+!.env.example
 .playwright-mcp/
 .vercel
 api/\[domain\]/v1/\[rpc\].js

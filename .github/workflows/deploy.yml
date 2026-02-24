@@ -1,7 +1,7 @@
 # GitHub Actions Deploy Workflow
-# Template per progetti Next.js + Payload CMS su fodivps2.cloud
+# Monorepo Docker: shell + italia + mondo + osint
 #
-# Secrets da configurare:
+# Secrets:
 # - VPS_HOST: 72.61.184.133
 # - VPS_USER: sviluppatore
 # - SSH_PRIVATE_KEY: contenuto ~/.ssh/github_deploy
@@ -20,6 +20,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -28,32 +29,46 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: PROJECT_PATH
+          command_timeout: 12m
           script: |
+            set -e
             cd $PROJECT_PATH
 
-            # Pull latest changes
+            echo "=== Pulling latest changes ==="
             git pull origin main
 
-            # Install dependencies
-            npm ci --prefer-offline
-
-            # Build application
-            npm run build
-
-            # Rebuild and restart container
+            echo "=== Building and restarting containers ==="
             docker compose build --no-cache
             docker compose up -d
 
-            # Wait for container to be ready
-            sleep 15
+            echo "=== Waiting for containers to be ready ==="
+            sleep 20
 
-            # Health check
-            HEALTH_URL="http://localhost:3000/api/health"
-            if curl -sf $HEALTH_URL > /dev/null 2>&1; then
-              echo "Health check passed"
-            else
-              echo "Warning: Health check endpoint not responding"
+            echo "=== Health checks ==="
+            # Check all containers are running
+            RUNNING=$(docker compose ps --status running --format json | wc -l)
+            EXPECTED=4
+            if [ "$RUNNING" -lt "$EXPECTED" ]; then
+              echo "ERROR: Only $RUNNING/$EXPECTED containers running"
+              docker compose ps
+              docker compose logs --tail=30
+              exit 1
             fi
+
+            # Check italia health endpoint
+            ITALIA_HEALTH=$(docker compose exec -T italia wget -qO- http://localhost:3000/api/health 2>/dev/null || echo "FAIL")
+            echo "Italia health: $ITALIA_HEALTH"
+
+            # Check osint health endpoint
+            OSINT_HEALTH=$(docker compose exec -T osint wget -qO- http://localhost:3003/api/osint/health 2>/dev/null || echo "FAIL")
+            echo "OSINT health: $OSINT_HEALTH"
+
+            # External check via Traefik
+            EXTERNAL_CHECK=$(curl -sf --max-time 10 "https://fodi-eyes.fodivps2.cloud/" -o /dev/null && echo "OK" || echo "FAIL")
+            echo "External check: $EXTERNAL_CHECK"
+
+            echo "=== Deploy complete ==="
+            docker compose ps
 
       - name: Notify deployment
         if: always()
