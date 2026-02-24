@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
     env_file: .env.mondo
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/mondo/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/mondo/"]
       interval: 30s
       timeout: 5s
       retries: 3
