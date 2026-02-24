@@ -16,6 +16,7 @@ import type {
   CyberThreat,
 } from '@/types';
 
+import type { TerritorialWebcam } from '@/config/webcams-italia';
 import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
 import type { WeatherAlert } from '@/services/weather';
@@ -401,6 +402,12 @@ export class MapContainer {
   public clearCountryHighlight(): void {
     if (this.useDeckGL) {
       this.deckGLMap?.clearCountryHighlight();
+    }
+  }
+
+  public onWebcamClicked(callback: (webcam: TerritorialWebcam) => void): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setOnWebcamClick(callback);
     }
   }
 

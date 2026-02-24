@@ -1197,6 +1197,12 @@ export class App {
     webcamPanel.setWebcamSelectHandler((webcam) => {
       this.map?.setCenter(webcam.lat, webcam.lon, 12);
     });
+    // Connect map webcam icon click → open viewer + switch to webcam tab
+    this.map?.onWebcamClicked((webcam) => {
+      this.sidebar?.setActiveTab('webcam');
+      webcamPanel.selectWebcam(webcam);
+      this.map?.setCenter(webcam.lat, webcam.lon, 12);
+    });
 
     // === TAB: Intel ===
     const entitySearchPanel = new EntitySearchPanel();

@@ -4,11 +4,11 @@ import { escapeHtml } from '@/utils/sanitize';
 
 type TipoFilter = 'all' | TerritorialWebcam['tipo'];
 
-// Domains known to allow iframe embedding
-const EMBEDDABLE_DOMAINS = ['skylinewebcams.com', 'webcamitalia.it'];
+// Domains known to BLOCK iframe embedding (X-Frame-Options: DENY/SAMEORIGIN)
+const BLOCKED_DOMAINS = ['skylinewebcams.com', 'webcamitalia.it', 'meteowebcam.it', 'calabriawebcam.it'];
 
 function isEmbeddable(webcam: TerritorialWebcam): boolean {
-  return EMBEDDABLE_DOMAINS.some(d => webcam.url.includes(d));
+  return !BLOCKED_DOMAINS.some(d => webcam.url.includes(d));
 }
 
 function getRegionList(): string[] {
@@ -337,6 +337,15 @@ export class TerritorialWebcamsPanel extends Panel {
     }
 
     this.content.appendChild(list);
+  }
+
+  selectWebcam(webcam: TerritorialWebcam): void {
+    this.activeWebcam = webcam;
+    // Auto-set region filter to match
+    this.regionFilter = webcam.regione.toLowerCase();
+    this.provinciaFilter = 'all';
+    this.tipoFilter = 'all';
+    this.render();
   }
 
   setRegionFilter(region: string): void {
