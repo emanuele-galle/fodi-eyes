@@ -66,7 +66,7 @@ const ALLOWED_DOMAINS = new Set([
   'www.haaretz.com', 'www.scmp.com', 'kyivindependent.com',
   'www.themoscowtimes.com', 'feeds.24.com', 'feeds.capi24.com',
   // International
-  'www.france24.com', 'www.euronews.com', 'www.lemonde.fr',
+  'www.france24.com', 'www.euronews.com', 'it.euronews.com', 'www.lemonde.fr',
   'rss.dw.com', 'www.africanews.com',
   // Nigeria
   'www.premiumtimesng.com', 'www.vanguardngr.com', 'www.channelstv.com',
@@ -162,46 +162,51 @@ app.get('/api/rss-proxy', async (c) => {
   }
 });
 
+// ── Spread BTP-Bund — live from Yahoo Finance (IT10Y=RR vs DE10Y=RR) ─────────
+app.get('/api/spread', async (c) => {
+  try {
+    const spreadData = await cachedFetch('btp-spread', 30 * 60 * 1000, async () => {
+      const [btpRes, bundRes] = await Promise.all([
+        fetch('https://query1.finance.yahoo.com/v8/finance/chart/IT10Y%3DRR?interval=1d&range=5d'),
+        fetch('https://query1.finance.yahoo.com/v8/finance/chart/DE10Y%3DRR?interval=1d&range=5d'),
+      ]);
+      const btpData  = await btpRes.json();
+      const bundData = await bundRes.json();
+      const period   = new Date().toISOString().slice(0, 10);
+
+      function extractLastClose(d) {
+        try {
+          const closes = d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+          const valid  = closes.filter(v => v != null);
+          return valid.at(-1) ?? d?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
+        } catch { return null; }
+      }
+
+      const btpYield  = extractLastClose(btpData);
+      const bundYield = extractLastClose(bundData);
+
+      if (btpYield != null && bundYield != null) {
+        return {
+          value: Math.round((btpYield - bundYield) * 100),
+          btpYield, bundYield, period,
+          source: 'Yahoo Finance',
+        };
+      }
+      return { value: 128, period, source: 'fallback' };
+    });
+    return c.json(spreadData);
+  } catch {
+    return c.json({ error: 'Spread data unavailable' }, 502);
+  }
+});
+
 // ISTAT SDMX API Proxy
 app.get('/api/istat', async (c) => {
   const type = c.req.query('type');
 
-  // Spread BTP-Bund — live from Yahoo Finance (IT10Y=RR vs DE10Y=RR)
+  // Legacy: keep /api/istat?type=spread working as redirect
   if (type === 'spread') {
-    try {
-      const spreadData = await cachedFetch('btp-spread', 30 * 60 * 1000, async () => {
-        const [btpRes, bundRes] = await Promise.all([
-          fetch('https://query1.finance.yahoo.com/v8/finance/chart/IT10Y%3DRR?interval=1d&range=5d'),
-          fetch('https://query1.finance.yahoo.com/v8/finance/chart/DE10Y%3DRR?interval=1d&range=5d'),
-        ]);
-        const btpData  = await btpRes.json();
-        const bundData = await bundRes.json();
-        const period   = new Date().toISOString().slice(0, 10);
-
-        function extractLastClose(d) {
-          try {
-            const closes = d?.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
-            const valid  = closes.filter(v => v != null);
-            return valid.at(-1) ?? d?.chart?.result?.[0]?.meta?.regularMarketPrice ?? null;
-          } catch { return null; }
-        }
-
-        const btpYield  = extractLastClose(btpData);
-        const bundYield = extractLastClose(bundData);
-
-        if (btpYield != null && bundYield != null) {
-          return {
-            value: Math.round((btpYield - bundYield) * 100),
-            btpYield, bundYield, period,
-            source: 'Yahoo Finance',
-          };
-        }
-        return { value: 128, period, source: 'fallback' };
-      });
-      return c.json(spreadData);
-    } catch {
-      return c.json({ error: 'Spread data unavailable' }, 502);
-    }
+    return c.redirect('/api/spread');
   }
 
   const dataset = c.req.query('dataset');
@@ -527,6 +532,15 @@ app.post('/api/infrastructure/v1/list-internet-outages', async (c) => {
   }
 });
 
+// ── Infrastructure — baseline snapshot stubs ─────────────────────────────────
+app.post('/api/infrastructure/v1/record-baseline-snapshot', async (c) => {
+  return c.json({ ok: true });
+});
+
+app.post('/api/infrastructure/v1/get-temporal-baseline', async (c) => {
+  return c.json({ ok: true });
+});
+
 // ── Economic — Yahoo Finance major indices (free, no key required) ─────────────
 app.post('/api/economic/v1/list-indicators', async (c) => {
   try {
@@ -591,22 +605,26 @@ app.post('/api/market/v1/list-quotes', async (c) => {
     for (const sym of symbols) {
       try {
         const res = await fetch(
-          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=2d`
+          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1d&range=5d`
         );
         const data = await res.json();
         const result = data?.chart?.result?.[0];
         if (!result) continue;
 
         const meta = result.meta;
-        const change = meta.regularMarketPrice - (meta.previousClose || 0);
+        const closes = result.indicators?.quote?.[0]?.close || [];
+        const validCloses = closes.filter(v => v != null);
+        const lastClose = validCloses.at(-1) ?? meta.regularMarketPrice;
+        const prevClose = validCloses.at(-2) ?? meta.previousClose ?? lastClose;
+        const change = lastClose - prevClose;
+        const changePct = prevClose ? (change / prevClose) * 100 : 0;
+
         items.push({
           symbol: sym,
-          price: meta.regularMarketPrice,
-          previousClose: meta.previousClose,
+          price: Math.round(lastClose * 100) / 100,
+          previousClose: Math.round(prevClose * 100) / 100,
           change: Math.round(change * 100) / 100,
-          changePct: meta.previousClose
-            ? Math.round((change / meta.previousClose) * 10000) / 100
-            : 0,
+          changePct: Math.round(changePct * 100) / 100,
           currency: meta.currency,
           exchange: meta.exchangeName,
         });
@@ -742,7 +760,14 @@ app.post('/api/news/v1/list-briefs', async (c) => {
       const res = await fetch(
         'https://api.gdeltproject.org/api/v2/doc/doc?query=(Italy%20OR%20security%20OR%20defense%20OR%20intelligence)&mode=ArtList&maxrecords=50&format=json&sort=DateDesc'
       );
-      const data = await res.json();
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        // GDELT rate-limited or returned non-JSON (plain text error)
+        return [];
+      }
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch { return []; }
       return (data.articles || []).map(a => ({
         id: a.url ? Buffer.from(a.url).toString('base64').slice(0, 12) : '',
         title: a.title,
