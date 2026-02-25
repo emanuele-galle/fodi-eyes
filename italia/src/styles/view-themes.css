@@ -1,0 +1,796 @@
+/* ============================================================
+   View Themes — 3 distinct visual identities
+   Each view overrides CSS custom properties on its container
+   ============================================================ */
+
+/* ── Shared: View transition ── */
+.view-container {
+  transition: opacity 150ms ease-in-out;
+}
+
+.view-container.active {
+  animation: view-fade-in 150ms ease-in-out;
+}
+
+@keyframes view-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Shared: Scanline keyframes ── */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes crt-flicker {
+  0%   { opacity: 0.97; }
+  5%   { opacity: 1; }
+  10%  { opacity: 0.98; }
+  15%  { opacity: 1; }
+  50%  { opacity: 1; }
+  52%  { opacity: 0.96; }
+  54%  { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes matrix-rain {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 0% 100%;
+  }
+}
+
+/* ============================================================
+   1. ITALIA VIEW — Centro di Controllo Militare
+   Dark green/olive military aesthetic
+   ============================================================ */
+.italia-view {
+  /* Backgrounds */
+  --bg: #050a05;
+  --bg-secondary: #081008;
+  --surface: #0d1a0d;
+  --surface-hover: #122012;
+  --surface-active: #163016;
+
+  /* Borders */
+  --border: #1a3a1a;
+  --border-strong: #2a5a2a;
+  --border-subtle: #0f250f;
+
+  /* Text */
+  --text: #c8e6c9;
+  --text-secondary: #a5d6a7;
+  --text-dim: #6d9b6d;
+  --text-muted: #4a7a4a;
+  --text-faint: #3a5a3a;
+  --text-ghost: #2a4a2a;
+  --accent: #00ff41;
+
+  /* Overlays */
+  --overlay-subtle: rgba(0, 255, 65, 0.02);
+  --overlay-light: rgba(0, 255, 65, 0.04);
+  --overlay-medium: rgba(0, 255, 65, 0.08);
+  --overlay-heavy: rgba(0, 255, 65, 0.15);
+  --shadow-color: rgba(0, 20, 0, 0.6);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #1a3a1a;
+  --scrollbar-thumb-hover: #2a5a2a;
+
+  /* Input */
+  --input-bg: #0a150a;
+
+  /* Panels */
+  --panel-bg: #0d1a0d;
+  --panel-border: #1a3a1a;
+
+  /* Map */
+  --map-bg: #020a02;
+  --map-grid: #0a2a0a;
+  --map-country: #0a2010;
+  --map-stroke: #1b5e20;
+
+  /* Accent override */
+  --green: #00ff41;
+
+  /* Semantic overrides */
+  --semantic-critical: #ff4444;
+  --semantic-high: #ff8800;
+  --semantic-elevated: #ffaa00;
+}
+
+/* Italia: Scanline overlay */
+.italia-view::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 255, 65, 0.015) 2px,
+    rgba(0, 255, 65, 0.015) 4px
+  );
+}
+
+/* Italia: Moving scanline bar */
+.italia-view::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 255, 65, 0.12),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 101;
+  animation: scanline 8s linear infinite;
+}
+
+/* Italia: Panel headers — military style */
+.italia-view .panel-title,
+.italia-view .sidebar-header,
+.italia-view .section-title {
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #00ff41;
+  border-bottom: 1px solid #1a3a1a;
+  padding-bottom: 6px;
+}
+
+/* Italia: Status indicator pulsing dots */
+.italia-view .status-dot,
+.italia-view .live-indicator {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Italia: Webcam grid layout */
+.italia-view .webcam-grid,
+.italia-view .camera-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+
+/* Italia: Card styling */
+.italia-view .card,
+.italia-view .webcam-card,
+.italia-view .panel {
+  border: 1px solid #1a3a1a;
+  background: #0d1a0d;
+  box-shadow: inset 0 1px 0 rgba(0, 255, 65, 0.05);
+}
+
+.italia-view .card:hover,
+.italia-view .webcam-card:hover {
+  border-color: #2a5a2a;
+  box-shadow:
+    inset 0 1px 0 rgba(0, 255, 65, 0.08),
+    0 0 12px rgba(0, 255, 65, 0.05);
+}
+
+/* ── Italia: Light theme variant ── */
+[data-theme="light"] .italia-view {
+  --bg: #e8f5e9;
+  --bg-secondary: #f1f8e9;
+  --surface: #ffffff;
+  --surface-hover: #f1f8f1;
+  --surface-active: #c8e6c9;
+
+  --border: #a5d6a7;
+  --border-strong: #66bb6a;
+  --border-subtle: #c8e6c9;
+
+  --text: #1b3a1b;
+  --text-secondary: #2e5a2e;
+  --text-dim: #558b55;
+  --text-muted: #81c784;
+  --text-faint: #a5d6a7;
+  --text-ghost: #c8e6c9;
+  --accent: #1b5e20;
+
+  --overlay-subtle: rgba(27, 94, 32, 0.03);
+  --overlay-light: rgba(27, 94, 32, 0.05);
+  --overlay-medium: rgba(27, 94, 32, 0.1);
+  --overlay-heavy: rgba(27, 94, 32, 0.18);
+  --shadow-color: rgba(0, 0, 0, 0.1);
+
+  --scrollbar-thumb: #a5d6a7;
+  --scrollbar-thumb-hover: #66bb6a;
+
+  --input-bg: #f1f8f1;
+
+  --panel-bg: #ffffff;
+  --panel-border: #a5d6a7;
+
+  --map-bg: #e8f5e9;
+  --map-grid: #c8e6c9;
+  --map-country: #a5d6a7;
+  --map-stroke: #2e7d32;
+
+  --green: #1b5e20;
+}
+
+[data-theme="light"] .italia-view::before {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(27, 94, 32, 0.02) 2px,
+    rgba(27, 94, 32, 0.02) 4px
+  );
+}
+
+[data-theme="light"] .italia-view::after {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(27, 94, 32, 0.06),
+    transparent
+  );
+}
+
+[data-theme="light"] .italia-view .panel-title,
+[data-theme="light"] .italia-view .sidebar-header,
+[data-theme="light"] .italia-view .section-title {
+  color: #1b5e20;
+  border-bottom-color: #a5d6a7;
+}
+
+[data-theme="light"] .italia-view .card,
+[data-theme="light"] .italia-view .webcam-card,
+[data-theme="light"] .italia-view .panel {
+  border-color: #a5d6a7;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+
+/* ============================================================
+   2. MONDO VIEW — WorldMonitor Classic
+   Professional intelligence dashboard, dark navy
+   ============================================================ */
+.mondo-view {
+  /* Backgrounds */
+  --bg: #0a0f1a;
+  --bg-secondary: #0d1220;
+  --surface: #111827;
+  --surface-hover: #1a2236;
+  --surface-active: #1e293b;
+
+  /* Borders */
+  --border: #1e293b;
+  --border-strong: #334155;
+  --border-subtle: #151d2e;
+
+  /* Text */
+  --text: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --text-dim: #64748b;
+  --text-muted: #475569;
+  --text-faint: #334155;
+  --text-ghost: #1e293b;
+  --accent: #f8fafc;
+
+  /* Overlays */
+  --overlay-subtle: rgba(79, 195, 247, 0.02);
+  --overlay-light: rgba(79, 195, 247, 0.04);
+  --overlay-medium: rgba(79, 195, 247, 0.08);
+  --overlay-heavy: rgba(79, 195, 247, 0.15);
+  --shadow-color: rgba(0, 0, 20, 0.5);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #1e293b;
+  --scrollbar-thumb-hover: #334155;
+
+  /* Input */
+  --input-bg: #0f172a;
+
+  /* Panels */
+  --panel-bg: #111827;
+  --panel-border: #1e293b;
+
+  /* Map */
+  --map-bg: #060c18;
+  --map-grid: #0d1a30;
+  --map-country: #0f1e38;
+  --map-stroke: #1e3a5f;
+
+  /* Accent override */
+  --green: #4fc3f7;
+
+  /* Semantic overrides — keep defaults mostly, tweak for navy bg */
+  --semantic-critical: #ef4444;
+  --semantic-high: #f59e0b;
+  --semantic-elevated: #fbbf24;
+}
+
+/* Mondo: Blue glow on active/focused elements */
+.mondo-view .card:focus-within,
+.mondo-view .webcam-card:focus-within,
+.mondo-view .panel:focus-within,
+.mondo-view input:focus,
+.mondo-view select:focus {
+  box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.3),
+              0 0 12px rgba(79, 195, 247, 0.08);
+}
+
+/* Mondo: Clean data-dense panel look */
+.mondo-view .panel,
+.mondo-view .sidebar-section {
+  border: 1px solid #1e293b;
+  background: #111827;
+}
+
+.mondo-view .panel-title,
+.mondo-view .sidebar-header,
+.mondo-view .section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #4fc3f7;
+  opacity: 0.9;
+}
+
+/* Mondo: Active elements with subtle blue underline */
+.mondo-view .card.active,
+.mondo-view .list-item.active {
+  border-left: 2px solid #4fc3f7;
+}
+
+/* Mondo: Sidebar panels — data dense */
+.mondo-view .sidebar-content {
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* Mondo: Stat values */
+.mondo-view .stat-value,
+.mondo-view .metric-value {
+  color: #4fc3f7;
+  font-weight: 600;
+}
+
+/* ── Mondo: Light theme variant ── */
+[data-theme="light"] .mondo-view {
+  --bg: #f0f4f8;
+  --bg-secondary: #e8edf2;
+  --surface: #ffffff;
+  --surface-hover: #f1f5f9;
+  --surface-active: #e2e8f0;
+
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --border-subtle: #e2e8f0;
+
+  --text: #0f172a;
+  --text-secondary: #1e293b;
+  --text-dim: #475569;
+  --text-muted: #94a3b8;
+  --text-faint: #cbd5e1;
+  --text-ghost: #e2e8f0;
+  --accent: #0f172a;
+
+  --overlay-subtle: rgba(15, 23, 42, 0.02);
+  --overlay-light: rgba(15, 23, 42, 0.04);
+  --overlay-medium: rgba(15, 23, 42, 0.08);
+  --overlay-heavy: rgba(15, 23, 42, 0.15);
+  --shadow-color: rgba(0, 0, 0, 0.08);
+
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
+
+  --input-bg: #f8fafc;
+
+  --panel-bg: #ffffff;
+  --panel-border: #cbd5e1;
+
+  --map-bg: #f0f4f8;
+  --map-grid: #e2e8f0;
+  --map-country: #cbd5e1;
+  --map-stroke: #3b82f6;
+
+  --green: #0284c7;
+}
+
+[data-theme="light"] .mondo-view .panel-title,
+[data-theme="light"] .mondo-view .sidebar-header,
+[data-theme="light"] .mondo-view .section-title {
+  color: #0284c7;
+}
+
+[data-theme="light"] .mondo-view .card:focus-within,
+[data-theme="light"] .mondo-view input:focus,
+[data-theme="light"] .mondo-view select:focus {
+  box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.3),
+              0 0 8px rgba(2, 132, 199, 0.06);
+}
+
+[data-theme="light"] .mondo-view .stat-value,
+[data-theme="light"] .mondo-view .metric-value {
+  color: #0284c7;
+}
+
+
+/* ============================================================
+   3. OSINT VIEW — Terminal Hacker
+   Pure black, phosphorescent green, retro CRT
+   Always dark — no light variant
+   ============================================================ */
+.osint-view {
+  /* Backgrounds */
+  --bg: #000000;
+  --bg-secondary: #050505;
+  --surface: #0a0a0a;
+  --surface-hover: #111111;
+  --surface-active: #0f1a0f;
+
+  /* Borders */
+  --border: #1a1a1a;
+  --border-strong: #2a2a2a;
+  --border-subtle: #0f0f0f;
+
+  /* Text */
+  --text: #00ff41;
+  --text-secondary: #33ff66;
+  --text-dim: #008f11;
+  --text-muted: #006b0d;
+  --text-faint: #004a09;
+  --text-ghost: #002a05;
+  --accent: #00ff41;
+
+  /* Overlays */
+  --overlay-subtle: rgba(0, 255, 65, 0.01);
+  --overlay-light: rgba(0, 255, 65, 0.03);
+  --overlay-medium: rgba(0, 255, 65, 0.06);
+  --overlay-heavy: rgba(0, 255, 65, 0.12);
+  --shadow-color: rgba(0, 0, 0, 0.8);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #1a1a1a;
+  --scrollbar-thumb-hover: #00ff41;
+
+  /* Input */
+  --input-bg: #050505;
+
+  /* Panels */
+  --panel-bg: #0a0a0a;
+  --panel-border: #1a1a1a;
+
+  /* Map */
+  --map-bg: #000000;
+  --map-grid: #0a1a0a;
+  --map-country: #061006;
+  --map-stroke: #00ff41;
+
+  /* Accent override */
+  --green: #00ff41;
+
+  /* Font — everything monospace */
+  --font-body: var(--font-mono);
+
+  /* Semantic overrides — terminal palette */
+  --semantic-critical: #ff3333;
+  --semantic-high: #ffaa00;
+  --semantic-elevated: #ffaa00;
+}
+
+/* Force dark mode on OSINT view even in light theme */
+[data-theme="light"] .osint-view {
+  --bg: #000000;
+  --bg-secondary: #050505;
+  --surface: #0a0a0a;
+  --surface-hover: #111111;
+  --surface-active: #0f1a0f;
+  --border: #1a1a1a;
+  --border-strong: #2a2a2a;
+  --border-subtle: #0f0f0f;
+  --text: #00ff41;
+  --text-secondary: #33ff66;
+  --text-dim: #008f11;
+  --text-muted: #006b0d;
+  --text-faint: #004a09;
+  --text-ghost: #002a05;
+  --accent: #00ff41;
+  --input-bg: #050505;
+  --panel-bg: #0a0a0a;
+  --panel-border: #1a1a1a;
+  --green: #00ff41;
+  --scrollbar-thumb: #1a1a1a;
+  --scrollbar-thumb-hover: #00ff41;
+  --map-bg: #000000;
+  --map-grid: #0a1a0a;
+  --map-country: #061006;
+  --map-stroke: #00ff41;
+}
+
+/* OSINT: CRT scanline overlay */
+.osint-view::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 255, 65, 0.03) 1px,
+    rgba(0, 255, 65, 0.03) 2px
+  );
+}
+
+/* OSINT: Moving scanline + CRT flicker */
+.osint-view::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 255, 65, 0.18),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 101;
+  animation: scanline 6s linear infinite;
+}
+
+/* OSINT: CRT flicker on the whole view */
+.osint-view {
+  animation: crt-flicker 4s ease-in-out infinite;
+}
+
+/* OSINT: Matrix rain background — very subtle */
+.osint-view > *:first-child::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.03;
+  background-image:
+    linear-gradient(0deg, transparent 24%,
+      rgba(0, 255, 65, 0.04) 25%, rgba(0, 255, 65, 0.04) 26%,
+      transparent 27%, transparent 74%,
+      rgba(0, 255, 65, 0.04) 75%, rgba(0, 255, 65, 0.04) 76%,
+      transparent 77%),
+    linear-gradient(90deg, transparent 24%,
+      rgba(0, 255, 65, 0.04) 25%, rgba(0, 255, 65, 0.04) 26%,
+      transparent 27%, transparent 74%,
+      rgba(0, 255, 65, 0.04) 75%, rgba(0, 255, 65, 0.04) 76%,
+      transparent 77%);
+  background-size: 20px 20px;
+  animation: matrix-rain 20s linear infinite;
+}
+
+/* OSINT: All text forced monospace */
+.osint-view,
+.osint-view * {
+  font-family: var(--font-mono) !important;
+}
+
+/* OSINT: Panel and card styling */
+.osint-view .panel,
+.osint-view .card,
+.osint-view .sidebar-section {
+  border: 1px solid #1a1a1a;
+  background: #0a0a0a;
+  box-shadow: none;
+}
+
+.osint-view .panel:hover,
+.osint-view .card:hover {
+  border-color: #002a05;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.06);
+}
+
+.osint-view .panel:focus-within,
+.osint-view .card:focus-within {
+  border-color: #00ff41;
+  box-shadow:
+    0 0 1px #00ff41,
+    0 0 8px rgba(0, 255, 65, 0.15),
+    0 0 20px rgba(0, 255, 65, 0.05);
+}
+
+/* OSINT: Panel headers — terminal style */
+.osint-view .panel-title,
+.osint-view .sidebar-header,
+.osint-view .section-title {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #00ff41;
+}
+
+/* OSINT: Input fields — terminal prompt style */
+.osint-view input[type="text"],
+.osint-view input[type="search"],
+.osint-view input[type="url"],
+.osint-view textarea {
+  background: #000000;
+  border: 1px solid #1a1a1a;
+  color: #00ff41;
+  caret-color: #00ff41;
+  padding-left: 20px;
+}
+
+/* Terminal prompt prefix */
+.osint-view input[type="text"]::placeholder,
+.osint-view input[type="search"]::placeholder,
+.osint-view input[type="url"]::placeholder {
+  color: #004a09;
+}
+
+/* OSINT: Glowing green interactive elements */
+.osint-view button:hover,
+.osint-view a:hover {
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.4);
+}
+
+.osint-view button:focus-visible,
+.osint-view input:focus {
+  outline: 1px solid #00ff41;
+  outline-offset: 1px;
+  box-shadow:
+    0 0 4px rgba(0, 255, 65, 0.3),
+    0 0 12px rgba(0, 255, 65, 0.1);
+}
+
+/* OSINT: Results display — terminal output style */
+.osint-view .result-item,
+.osint-view .log-entry {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 2px 0;
+  border-bottom: 1px solid #0f0f0f;
+}
+
+.osint-view .result-timestamp,
+.osint-view .log-time {
+  color: #006b0d;
+  margin-right: 8px;
+}
+
+/* OSINT: Warning and status colors */
+.osint-view .status-warning,
+.osint-view .warning {
+  color: #ffaa00;
+  text-shadow: 0 0 4px rgba(255, 170, 0, 0.2);
+}
+
+.osint-view .status-error,
+.osint-view .error,
+.osint-view .critical {
+  color: #ff3333;
+  text-shadow: 0 0 4px rgba(255, 51, 51, 0.2);
+}
+
+.osint-view .status-ok,
+.osint-view .success {
+  color: #00ff41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
+}
+
+/* OSINT: Scrollbar — green on black */
+.osint-view ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.osint-view ::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+.osint-view ::-webkit-scrollbar-thumb {
+  background: #1a1a1a;
+  border-radius: 0;
+}
+
+.osint-view ::-webkit-scrollbar-thumb:hover {
+  background: #00ff41;
+}
+
+/* OSINT: Selection color */
+.osint-view ::selection {
+  background: rgba(0, 255, 65, 0.25);
+  color: #ffffff;
+}
+
+
+/* ============================================================
+   Header Tab Colors — per-view accent on active state
+   ============================================================ */
+
+/* Italia tab active: military green */
+.header-tab[data-view="italia"].active,
+.header-tab.tab-italia.active {
+  color: #00ff41;
+  border-color: #00ff41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.2);
+}
+
+.header-tab[data-view="italia"]:hover,
+.header-tab.tab-italia:hover {
+  color: #66ff77;
+}
+
+/* Mondo tab active: cyan blue */
+.header-tab[data-view="mondo"].active,
+.header-tab.tab-mondo.active {
+  color: #4fc3f7;
+  border-color: #4fc3f7;
+  text-shadow: 0 0 6px rgba(79, 195, 247, 0.2);
+}
+
+.header-tab[data-view="mondo"]:hover,
+.header-tab.tab-mondo:hover {
+  color: #81d4fa;
+}
+
+/* OSINT tab active: terminal green with glow */
+.header-tab[data-view="osint"].active,
+.header-tab.tab-osint.active {
+  color: #00ff41;
+  border-color: #00ff41;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+  box-shadow: 0 0 6px rgba(0, 255, 65, 0.1);
+}
+
+.header-tab[data-view="osint"]:hover,
+.header-tab.tab-osint:hover {
+  color: #33ff66;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
+}
+
+/* ── Light theme tab overrides ── */
+[data-theme="light"] .header-tab[data-view="italia"].active,
+[data-theme="light"] .header-tab.tab-italia.active {
+  color: #1b5e20;
+  border-color: #1b5e20;
+  text-shadow: none;
+}
+
+[data-theme="light"] .header-tab[data-view="mondo"].active,
+[data-theme="light"] .header-tab.tab-mondo.active {
+  color: #0284c7;
+  border-color: #0284c7;
+  text-shadow: none;
+}
+
+/* OSINT tab keeps dark glow even in light theme */
+[data-theme="light"] .header-tab[data-view="osint"].active,
+[data-theme="light"] .header-tab.tab-osint.active {
+  color: #00c234;
+  border-color: #00c234;
+  text-shadow: 0 0 4px rgba(0, 194, 52, 0.2);
+}

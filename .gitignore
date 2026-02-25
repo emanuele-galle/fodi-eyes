@@ -33,3 +33,16 @@ src-tauri/sidecar/node/*
 
 # Compiled sebuf gateway bundle (built by scripts/build-sidecar-sebuf.mjs)
 api/[[][[].*.js
+
+# Compiled RPC gateway bundle (built by scripts/build-server.mjs)
+server/rpc-gateway.mjs
+
+# Temp files
+TEMP/
+
+# Large images not needed in repo
+new-world-monitor.png
+mondo/new-world-monitor.png
+
+# Claudedocs (AI session artifacts)
+.claudedocs/

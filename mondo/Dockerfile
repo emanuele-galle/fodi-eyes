@@ -4,9 +4,13 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN VITE_VARIANT=full npm run build
+RUN node scripts/build-server.mjs
 
-FROM nginx:1.27-alpine
-COPY --from=builder /app/dist /usr/share/nginx/html/mondo
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+FROM node:24-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server/index.mjs ./server/index.mjs
+COPY --from=builder /app/server/rpc-gateway.mjs ./server/rpc-gateway.mjs
 EXPOSE 3000
-CMD ["nginx", "-g", "daemon off;"]
+ENV NODE_ENV=production
+CMD ["node", "server/index.mjs"]
