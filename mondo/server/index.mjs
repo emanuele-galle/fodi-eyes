@@ -140,22 +140,6 @@ const server = createServer(async (req, res) => {
   const pathname = url.pathname;
 
   try {
-    // Health check
-    if (pathname === '/mondo/' && req.method === 'GET') {
-      // Try to serve index.html, but also respond to wget health checks
-      const indexPath = join(DIST_DIR, 'mondo', 'index.html');
-      try {
-        const content = await readFile(indexPath, 'utf-8');
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(content);
-        return;
-      } catch {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('OK');
-        return;
-      }
-    }
-
     // RPC API routes: /api/{domain}/v1/{rpc}
     if (pathname.startsWith('/api/') && rpcHandler) {
       const webReq = nodeToWebRequest(req);
@@ -164,13 +148,15 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // Static files under /mondo/
-    if (pathname.startsWith('/mondo/')) {
-      const served = await serveStatic(pathname, res);
+    // Static files under /mondo/ — strip prefix to map to dist/
+    if (pathname === '/mondo/' || pathname.startsWith('/mondo/')) {
+      // Strip /mondo prefix: /mondo/assets/main.js → /assets/main.js
+      const stripped = pathname === '/mondo/' ? '/index.html' : pathname.slice('/mondo'.length);
+      const served = await serveStatic(stripped, res);
       if (served) return;
 
       // SPA fallback — serve index.html for non-file routes
-      const indexPath = join(DIST_DIR, 'mondo', 'index.html');
+      const indexPath = join(DIST_DIR, 'index.html');
       try {
         const content = await readFile(indexPath, 'utf-8');
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
