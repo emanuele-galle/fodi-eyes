@@ -232,6 +232,12 @@ export class MapContainer {
     // SVG map does not support flights layer
   }
 
+  public setWebcams(webcams: TerritorialWebcam[]): void {
+    if (this.useDeckGL) {
+      this.deckGLMap?.setWebcams(webcams);
+    }
+  }
+
   public setCyberThreats(threats: CyberThreat[]): void {
     if (this.useDeckGL) {
       this.deckGLMap?.setCyberThreats(threats);

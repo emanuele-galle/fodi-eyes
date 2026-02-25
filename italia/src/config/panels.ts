@@ -44,7 +44,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   climate: false,
   italyBoundaries: true,
   webcams: true,
-  flights: false,
+  flights: true,
 };
 
 // ============================================
@@ -75,6 +75,7 @@ export const LAYER_TO_SOURCE: Partial<Record<keyof MapLayers, DataSourceId[]>> =
   outages: ['outages'],
   cyberThreats: ['cyber_threats'],
   climate: ['climate'],
+  flights: ['opensky'],
 };
 
 // Refresh intervals (milliseconds)

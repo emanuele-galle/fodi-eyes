@@ -146,6 +146,7 @@ export class DeckGLMap {
   private climateAnomalies: ClimateAnomaly[] = [];
   private italyRegionsGeoJson: GeoJSON.FeatureCollection | null = null;
   private flightsData: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; origin: string; operator: string; aircraftType: string }> = [];
+  private dynamicWebcams: TerritorialWebcam[] = [];
 
   // Country highlight state
   private countryGeoJsonLoaded = false;
@@ -476,7 +477,8 @@ export class DeckGLMap {
 
   // Layer creation methods
   private createWebcamsLayer(): IconLayer {
-    const activeWebcams = WEBCAMS_ITALIA.filter(w => w.attiva);
+    const allWebcams = [...WEBCAMS_ITALIA, ...this.dynamicWebcams];
+    const activeWebcams = allWebcams.filter(w => w.attiva);
     return new IconLayer({
       id: 'webcams-layer',
       data: activeWebcams,
@@ -1400,7 +1402,7 @@ export class DeckGLMap {
         const speedKn = Math.round(f.velocity * 1.944);
         const html = `<div class="popup-flights">
           <h4>${escapeHtml(f.callsign)}</h4>
-          <div class="popup-detail"><span>Altitudine:</span> ${altFt.toLocaleString()} ft (${Math.round(f.altitude).toLocaleString()} m)</div>
+          <div class="popup-detail"><span>Altitudine:</span> ${altFt.toLocaleString('it-IT')} ft (${Math.round(f.altitude).toLocaleString('it-IT')} m)</div>
           <div class="popup-detail"><span>Velocità:</span> ${speedKn} kn (${Math.round(f.velocity)} m/s)</div>
           <div class="popup-detail"><span>Rotta:</span> ${Math.round(f.heading)}°</div>
           ${f.origin ? `<div class="popup-detail"><span>Origine:</span> ${escapeHtml(f.origin)}</div>` : ''}
@@ -1464,6 +1466,11 @@ export class DeckGLMap {
 
   public setFlights(flights: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; origin: string; operator: string; aircraftType: string }>): void {
     this.flightsData = flights;
+    this.render();
+  }
+
+  public setWebcams(webcams: TerritorialWebcam[]): void {
+    this.dynamicWebcams = webcams;
     this.render();
   }
 

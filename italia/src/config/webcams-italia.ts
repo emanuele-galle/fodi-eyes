@@ -1772,7 +1772,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/torino/piazza-castello-torino.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-to-002',
@@ -1785,7 +1785,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/torino/mole-antonelliana.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-to-003',
@@ -1798,7 +1798,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/torino/panorama-torino.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-to-004',
@@ -1837,7 +1837,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/cuneo/cuneo.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-cn-002',
@@ -1863,7 +1863,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/verbano-cusio-ossola/stresa-lago-maggiore.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-vb-002',
@@ -1876,7 +1876,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/verbano-cusio-ossola/macugnaga-monte-rosa.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-al-001',
@@ -1889,7 +1889,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/alessandria/alessandria.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-no-001',
@@ -1902,7 +1902,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/novara/lago-orta.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pie-at-001',
@@ -1915,7 +1915,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/piemonte/asti/asti.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === FRIULI VENEZIA GIULIA (espansione) ===
@@ -1930,7 +1930,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/trieste/piazza-unita-d-italia.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'fvg-ts-002',
@@ -1943,7 +1943,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/trieste/molo-audace-trieste.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'fvg-ud-001',
@@ -1956,7 +1956,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/udine/piazza-liberta-udine.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'fvg-ud-002',
@@ -1982,7 +1982,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/udine/tarvisio.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'fvg-go-001',
@@ -1995,7 +1995,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/gorizia/grado.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'fvg-ts-003',
@@ -2008,7 +2008,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'porto',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/friuli-venezia-giulia/trieste/muggia.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === TRENTINO ALTO ADIGE (espansione) ===
@@ -2023,7 +2023,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/trento/piazza-duomo-trento.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-bz-001',
@@ -2036,7 +2036,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/piazza-walther-bolzano.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-bz-002',
@@ -2049,7 +2049,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/merano.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-bz-003',
@@ -2062,7 +2062,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/ortisei-val-gardena.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-bz-004',
@@ -2075,7 +2075,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/selva-val-gardena.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-tn-004',
@@ -2114,7 +2114,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/plan-de-corones.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-bz-006',
@@ -2127,7 +2127,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/trentino-alto-adige/bolzano/bressanone.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'taa-tn-006',
@@ -2155,7 +2155,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'porto',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/cagliari/porto-cagliari.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-ca-002',
@@ -2168,7 +2168,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/cagliari/spiaggia-del-poetto.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-ca-003',
@@ -2181,7 +2181,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/cagliari/villasimius.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-ot-001',
@@ -2194,7 +2194,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'porto',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/olbia-tempio/porto-olbia.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-ss-003',
@@ -2207,7 +2207,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/sassari/castelsardo.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-or-001',
@@ -2220,7 +2220,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/oristano/bosa.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sar-nu-001',
@@ -2233,7 +2233,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sardegna/nuoro/cala-gonone.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === SICILIA (espansione) ===
@@ -2261,7 +2261,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sicilia/siracusa/ortigia-siracusa.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sic-tp-001',
@@ -2274,7 +2274,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sicilia/trapani/trapani-isole-egadi.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sic-rg-001',
@@ -2287,7 +2287,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sicilia/ragusa/marina-di-ragusa.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'sic-ag-001',
@@ -2300,7 +2300,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/sicilia/agrigento/san-leone-agrigento.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === VENETO (espansione) ===
@@ -2315,7 +2315,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/veneto/treviso/piazza-dei-signori-treviso.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ven-vi-001',
@@ -2328,7 +2328,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/veneto/vicenza/vicenza-piazza-dei-signori.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ven-ro-001',
@@ -2341,7 +2341,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/veneto/rovigo/rosolina-mare.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ven-vr-002',
@@ -2354,7 +2354,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/veneto/verona/peschiera-del-garda.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ven-ve-005',
@@ -2380,7 +2380,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/veneto/belluno/belluno-panorama.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === LAZIO (espansione) ===
@@ -2408,7 +2408,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lazio/roma/fori-imperiali.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'laz-rm-008',
@@ -2421,7 +2421,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lazio/roma/piazza-san-pietro.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'laz-vt-001',
@@ -2434,7 +2434,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lazio/viterbo/civita-di-bagnoregio.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'laz-rm-009',
@@ -2447,7 +2447,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'traffico',
     portale: 'airportwebcams.net',
     url: 'https://airportwebcams.net/fco-rome-fiumicino/',
-    attiva: true,
+    attiva: false,
   },
 
   // === EMILIA ROMAGNA (espansione) ===
@@ -2462,7 +2462,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/parma/parma.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ero-mo-001',
@@ -2475,7 +2475,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/modena/modena.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ero-ra-001',
@@ -2488,7 +2488,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/ravenna/ravenna.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ero-fe-001',
@@ -2501,7 +2501,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/ferrara/ferrara-castello-estense.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ero-ra-002',
@@ -2514,7 +2514,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/ravenna/cervia-milano-marittima.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'ero-pc-001',
@@ -2527,7 +2527,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/emilia-romagna/piacenza/piacenza.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === TOSCANA (espansione) ===
@@ -2555,7 +2555,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/toscana/arezzo/arezzo.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'tos-ms-001',
@@ -2568,7 +2568,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/toscana/massa-carrara/marina-di-massa.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === CAMPANIA (espansione) ===
@@ -2583,7 +2583,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/campania/napoli/procida-marina-corricella.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'cam-ce-001',
@@ -2611,7 +2611,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/puglia/bari/bari-lungomare.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pug-bt-001',
@@ -2624,7 +2624,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'porto',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/puglia/barletta-andria-trani/trani-porto.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pug-ta-001',
@@ -2637,7 +2637,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/puglia/taranto/taranto-ponte-girevole.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'pug-br-001',
@@ -2650,7 +2650,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/puglia/brindisi/ostuni.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === LOMBARDIA (espansione) ===
@@ -2665,7 +2665,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lombardia/bergamo/bergamo-alta.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'lom-mn-001',
@@ -2678,7 +2678,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lombardia/mantova/mantova.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'lom-pv-001',
@@ -2691,7 +2691,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lombardia/pavia/pavia.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'lom-bs-002',
@@ -2704,7 +2704,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/lombardia/brescia/sirmione-lago-garda.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === LIGURIA (espansione) ===
@@ -2719,7 +2719,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/liguria/genova/genova-lanterna.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'lig-sp-002',
@@ -2773,7 +2773,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/abruzzo/l-aquila/l-aquila.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'abr-aq-002',
@@ -2786,7 +2786,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/abruzzo/l-aquila/roccaraso.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'abr-te-001',
@@ -2799,7 +2799,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/abruzzo/teramo/giulianova.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === MARCHE (espansione) ===
@@ -2814,7 +2814,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'porto',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/marche/ancona/porto-ancona.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'mar-ap-001',
@@ -2827,7 +2827,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/marche/ascoli-piceno/san-benedetto-del-tronto.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'mar-mc-001',
@@ -2855,7 +2855,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/umbria/perugia/perugia-corso-vannucci.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'umb-tr-001',
@@ -2868,7 +2868,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/umbria/terni/orvieto.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'umb-tr-002',
@@ -2881,7 +2881,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/umbria/terni/cascata-delle-marmore.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === BASILICATA (espansione) ===
@@ -2896,7 +2896,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'mare',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/basilicata/matera/policoro.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'bas-pz-001',
@@ -2909,7 +2909,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'panoramica',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/basilicata/potenza/potenza.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === MOLISE (espansione) ===
@@ -2924,7 +2924,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/molise/campobasso/campobasso.html',
-    attiva: true,
+    attiva: false,
   },
   {
     id: 'mol-is-001',
@@ -2937,7 +2937,7 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'citta',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/molise/isernia/isernia.html',
-    attiva: true,
+    attiva: false,
   },
 
   // === VALLE D'AOSTA (espansione) ===
@@ -2965,6 +2965,6 @@ export const WEBCAMS_ITALIA: TerritorialWebcam[] = [
     tipo: 'montagna',
     portale: 'skylinewebcams.com',
     url: 'https://www.skylinewebcams.com/it/webcam/italia/valle-daosta/aosta/gressoney.html',
-    attiva: true,
+    attiva: false,
   },
 ];

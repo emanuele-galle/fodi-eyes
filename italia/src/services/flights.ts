@@ -1,13 +1,8 @@
 /**
  * Flights layer data service.
- * Fetches military/tracked flights from the local API and exposes a simple
+ * Fetches tracked flights from the local API and exposes a simple
  * array of FlightPoint objects for the map layer.
  */
-
-import {
-  MilitaryServiceClient,
-  type MilitaryFlight,
-} from '@/generated/client/worldmonitor/military/v1/service_client';
 
 export interface FlightPoint {
   id: string;
@@ -22,36 +17,62 @@ export interface FlightPoint {
   aircraftType: string;
 }
 
-// Italy bounding box (generous)
-const ITALY_BBOX = {
-  southWest: { latitude: 35.5, longitude: 6.5 },
-  northEast: { latitude: 47.5, longitude: 19.0 },
-};
-
-const client = new MilitaryServiceClient(window.location.origin);
+interface RawFlightItem {
+  icao24?: string;
+  id?: string;
+  callsign?: string;
+  hexCode?: string;
+  lat?: number;
+  lon?: number;
+  location?: { latitude: number; longitude: number };
+  altitude?: number;
+  velocity?: number;
+  speed?: number;
+  heading?: number;
+  origin?: string;
+  originCountry?: string;
+  operator?: string;
+  aircraftType?: string;
+  onGround?: boolean;
+}
 
 export async function fetchFlightsForMap(): Promise<FlightPoint[]> {
   try {
-    const resp = await client.listMilitaryFlights(
-      {
-        boundingBox: ITALY_BBOX,
+    const resp = await fetch('/api/military/v1/list-military-flights', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        boundingBox: {
+          southWest: { latitude: 35.5, longitude: 6.5 },
+          northEast: { latitude: 47.5, longitude: 19.0 },
+        },
         operator: 'MILITARY_OPERATOR_UNSPECIFIED',
         aircraftType: 'MILITARY_AIRCRAFT_TYPE_UNSPECIFIED',
-      },
-      { signal: AbortSignal.timeout(15_000) },
-    );
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
 
-    return (resp.flights || [])
-      .filter((f: MilitaryFlight) => f.location && f.location.latitude !== 0 && f.location.longitude !== 0)
-      .map((f: MilitaryFlight) => ({
-        id: f.id,
+    if (!resp.ok) return [];
+    const data = await resp.json();
+
+    // Support both formats: { flights: [...] } (generated proto) and { items: [...] } (server)
+    const items: RawFlightItem[] = data.flights || data.items || [];
+
+    return items
+      .filter((f) => {
+        const lat = f.lat ?? f.location?.latitude;
+        const lon = f.lon ?? f.location?.longitude;
+        return lat != null && lon != null && lat !== 0 && lon !== 0 && !f.onGround;
+      })
+      .map((f) => ({
+        id: f.icao24 || f.id || '',
         callsign: f.callsign || f.hexCode || 'N/A',
-        lat: f.location!.latitude,
-        lon: f.location!.longitude,
-        altitude: f.altitude,
-        velocity: f.speed,
-        heading: f.heading,
-        origin: f.origin || '',
+        lat: f.lat ?? f.location?.latitude ?? 0,
+        lon: f.lon ?? f.location?.longitude ?? 0,
+        altitude: f.altitude ?? 0,
+        velocity: f.velocity ?? f.speed ?? 0,
+        heading: f.heading ?? 0,
+        origin: f.origin || f.originCountry || '',
         operator: f.operator || '',
         aircraftType: f.aircraftType || '',
       }));

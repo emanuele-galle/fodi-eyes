@@ -62,6 +62,11 @@ export class ItaliaView implements ViewController {
       this.map?.setCenter(webcam.lat, webcam.lon, 12);
     });
 
+    // Pass dynamic webcams to the map layer when they load
+    webcamPanel?.setOnDynamicWebcamsLoaded((webcams) => {
+      this.map?.setWebcams(webcams);
+    });
+
     const trafficPanel = this.panels['traffic-webcams'] as TrafficWebcamsPanel;
     trafficPanel?.setWebcamSelectHandler((lat, lon) => {
       this.map?.setCenter(lat, lon, 10);

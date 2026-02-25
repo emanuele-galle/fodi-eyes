@@ -79,6 +79,7 @@ export class TerritorialWebcamsPanel extends Panel {
   private tipoFilter: TipoFilter = 'all';
   private activeWebcam: TerritorialWebcam | null = null;
   private onWebcamSelect: ((webcam: TerritorialWebcam) => void) | null = null;
+  private onDynamicLoaded: ((webcams: TerritorialWebcam[]) => void) | null = null;
   private modalOverlay: HTMLDivElement | null = null;
   /** Webcam IDs that failed to load at runtime */
   private runtimeOffline = new Set<string>();
@@ -88,8 +89,17 @@ export class TerritorialWebcamsPanel extends Panel {
     this.render();
     // Fetch dynamic webcams (Open Data Hub) and re-render when ready
     fetchDynamicWebcams().then(() => {
-      if (dynamicWebcams.length > 0) this.render();
+      if (dynamicWebcams.length > 0) {
+        this.render();
+        this.onDynamicLoaded?.(dynamicWebcams);
+      }
     });
+  }
+
+  setOnDynamicWebcamsLoaded(handler: (webcams: TerritorialWebcam[]) => void): void {
+    this.onDynamicLoaded = handler;
+    // If already loaded, fire immediately
+    if (dynamicWebcams.length > 0) handler(dynamicWebcams);
   }
 
   setWebcamSelectHandler(handler: (webcam: TerritorialWebcam) => void): void {

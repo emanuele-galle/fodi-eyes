@@ -1,6 +1,6 @@
 import type { NewsItem, Monitor, PanelConfig, MapLayers, RelatedAsset, InternetOutage, SocialUnrestEvent, CyberThreat } from '@/types';
 import {
-  FEEDS,
+  FEEDS_ITALIA as FEEDS,
   INTEL_SOURCES,
   MARKET_SYMBOLS,
   REFRESH_INTERVALS,
@@ -10,7 +10,7 @@ import {
   STORAGE_KEYS,
   LAYER_TO_SOURCE,
 } from '@/config';
-import { BETA_MODE } from '@/config/beta';
+// BETA_MODE removed — badge was in old header
 import { fetchCategoryFeeds, getFeedFailures, fetchMultipleStocks, fetchEarthquakes, fetchWeatherAlerts, fetchFredData, fetchInternetOutages, isOutagesConfigured, initDB, updateBaseline, calculateDeviation, saveSnapshot, cleanOldSnapshots, analysisWorker, fetchPizzIntStatus, fetchGdeltTensions, fetchNaturalEvents, fetchOilAnalytics, fetchCyberThreats } from '@/services';
 import { mlWorker } from '@/services/ml-worker';
 import { clusterNewsHybrid } from '@/services/clustering';
@@ -194,6 +194,15 @@ export class App {
       runtimePanel.enabled = true;
       this.panelSettings['runtime-config'] = runtimePanel;
       saveToStorage(STORAGE_KEYS.panels, this.panelSettings);
+    }
+
+    // One-time migration: enable flights layer (was false by default in earlier versions)
+    const FLIGHTS_MIGRATION_KEY = 'fodi-eyes-flights-enabled-v1';
+    if (!localStorage.getItem(FLIGHTS_MIGRATION_KEY)) {
+      this.mapLayers.flights = true;
+      saveToStorage(STORAGE_KEYS.mapLayers, this.mapLayers);
+      localStorage.setItem(FLIGHTS_MIGRATION_KEY, 'done');
+      console.log('[App] Applied flights migration: enabled flights layer');
     }
 
     this.initialUrlState = parseMapUrlState(window.location.search, this.mapLayers);
@@ -508,13 +517,7 @@ export class App {
   }
 
   private startHeaderClock(): void {
-    const el = document.getElementById('headerClock');
-    if (!el) return;
-    const tick = () => {
-      el.textContent = new Date().toUTCString().replace('GMT', 'UTC');
-    };
-    tick();
-    this.clockIntervalId = setInterval(tick, 1000);
+    // Clock removed from header (now in shell) — keep interval for internal use
   }
 
   private setupMobileWarning(): void {
@@ -585,12 +588,8 @@ export class App {
   private setupLanguageSelector(): void {
     this.languageSelector = new LanguageSelector();
     const headerRight = this.container.querySelector('.header-right');
-    const searchBtn = this.container.querySelector('#searchBtn');
 
-    if (headerRight && searchBtn) {
-      // Insert before search button or at the beginning if search button not found
-      headerRight.insertBefore(this.languageSelector.getElement(), searchBtn);
-    } else if (headerRight) {
+    if (headerRight) {
       headerRight.insertBefore(this.languageSelector.getElement(), headerRight.firstChild);
     }
   }
@@ -1013,29 +1012,19 @@ export class App {
 
   private renderLayout(): void {
     this.container.innerHTML = `
-      <div class="header">
+      <div class="header toolbar-compact">
         <div class="header-left">
-          <img src="/logo-fodi.png" alt="Fodi-eyes" class="header-logo" style="height:28px;margin-right:6px;vertical-align:middle;" /><span class="logo">FODI-EYES</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
-          <span class="credit-link">
-            <span class="credit-text">by Fodi S.r.l.</span>
-          </span>
-          <div class="status-indicator">
-            <span class="status-dot"></span>
-            <span>${t('header.live')}</span>
-          </div>
+          <button class="search-btn search-btn-inline" id="searchBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> ${t('header.search')} <kbd>⌘K</kbd></button>
         </div>
         <div class="header-right">
-          <span class="header-clock" id="headerClock"></span>
-          <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
-          ${this.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
             ${getCurrentTheme() === 'dark'
-        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
-        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>'}
+        ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>'}
           </button>
           ${this.isDesktopApp ? '' : `<button class="fullscreen-btn" id="fullscreenBtn" title="${t('header.fullscreen')}">⛶</button>`}
-          <button class="settings-btn" id="settingsBtn">⚙ ${t('header.settings')}</button>
-          <button class="sources-btn" id="sourcesBtn">📡 ${t('header.sources')}</button>
+          <button class="settings-btn" id="settingsBtn">⚙</button>
+          <button class="sources-btn" id="sourcesBtn">📡</button>
         </div>
       </div>
       <div class="main-content">
@@ -1049,7 +1038,55 @@ export class App {
             <span class="modal-title">${t('header.settings')}</span>
             <button class="modal-close" id="modalClose">×</button>
           </div>
-          <div class="panel-toggle-grid" id="panelToggles"></div>
+          <div class="settings-modal-tabs">
+            <button class="settings-modal-tab active" data-settings-tab="panels">Pannelli</button>
+            <button class="settings-modal-tab" data-settings-tab="apikeys">API Keys</button>
+          </div>
+          <div class="settings-modal-content">
+            <div class="settings-modal-panel active" id="settingsTabPanels" data-settings-panel="panels">
+              <div class="panel-toggle-grid" id="panelToggles"></div>
+            </div>
+            <div class="settings-modal-panel" id="settingsTabApikeys" data-settings-panel="apikeys">
+              <div class="apikeys-section">
+                <p class="apikeys-description">Configura le API keys per abilitare funzionalità avanzate. Le chiavi vengono salvate localmente nel browser.</p>
+                <div class="apikeys-list">
+                  <div class="apikey-row">
+                    <div class="apikey-info">
+                      <span class="apikey-label">🔥 FIRMS API Key</span>
+                      <span class="apikey-hint">Per dati incendi e hotspot satellite (NASA FIRMS)</span>
+                    </div>
+                    <div class="apikey-input-wrap">
+                      <input type="password" class="apikey-input" id="apikeyFirms" placeholder="Inserisci API key..." data-key="fodi_apikey_firms" autocomplete="off" />
+                      <span class="apikey-status" id="apikeyFirmsStatus"></span>
+                    </div>
+                  </div>
+                  <div class="apikey-row">
+                    <div class="apikey-info">
+                      <span class="apikey-label">🌦️ OpenWeatherMap API Key</span>
+                      <span class="apikey-hint">Per anomalie climatiche e allerte meteo</span>
+                    </div>
+                    <div class="apikey-input-wrap">
+                      <input type="password" class="apikey-input" id="apikeyOpenweather" placeholder="Inserisci API key..." data-key="fodi_apikey_openweathermap" autocomplete="off" />
+                      <span class="apikey-status" id="apikeyOpenweatherStatus"></span>
+                    </div>
+                  </div>
+                  <div class="apikey-row">
+                    <div class="apikey-info">
+                      <span class="apikey-label">🤖 AI Analysis API Key</span>
+                      <span class="apikey-hint">Per insight e analisi AI-powered (OpenRouter/Groq)</span>
+                    </div>
+                    <div class="apikey-input-wrap">
+                      <input type="password" class="apikey-input" id="apikeyAi" placeholder="Inserisci API key..." data-key="fodi_apikey_ai_analysis" autocomplete="off" />
+                      <span class="apikey-status" id="apikeyAiStatus"></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="apikeys-actions">
+                  <button class="apikeys-save-btn" id="apiKeysSaveBtn">Salva API Keys</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-overlay" id="sourcesModal">
@@ -1159,7 +1196,7 @@ export class App {
     this.currentTimeRange = this.map.getTimeRange();
 
     // === TAB: News ===
-    const liveNewsPanel = new LiveNewsPanel();
+    const liveNewsPanel = new LiveNewsPanel({ italiaOnly: true });
     this.panels['live-news'] = liveNewsPanel;
 
     const politicsPanel = new NewsPanel('politics', t('panels.politics'));
@@ -1202,6 +1239,10 @@ export class App {
     this.panels['webcam-territoriali'] = webcamPanel;
     webcamPanel.setWebcamSelectHandler((webcam) => {
       this.map?.setCenter(webcam.lat, webcam.lon, 12);
+    });
+    // Pass dynamic webcams to map layer when they load
+    webcamPanel.setOnDynamicWebcamsLoaded((webcams) => {
+      this.map?.setWebcams(webcams);
     });
     // Connect map webcam icon click → open viewer + switch to webcam tab
     this.map?.onWebcamClicked((webcam) => {
@@ -1283,7 +1324,7 @@ export class App {
       thinktanksPanel, energyPanel, techPanel, aiPanel,
     ]);
     this.sidebar.registerPanels('webcam', [webcamPanel]);
-    this.sidebar.registerPanels('intel', [entitySearchPanel, osintArsenalPanel, insightsPanel]);
+    this.sidebar.registerPanels('intel', [entitySearchPanel, insightsPanel]);
     this.sidebar.registerPanels('dati', [italiaDataPanel, openDataPanel, economicPanel, marketsPanel, politicsItalyPanel]);
     const panelToggleSettings = new PanelToggleSettings({
       getPanelSettings: () => this.panelSettings,
@@ -1300,7 +1341,7 @@ export class App {
     this.panels['panel-toggle-settings'] = panelToggleSettings;
 
     this.sidebar.registerPanels('tools', [
-      panelToggleSettings,
+      osintArsenalPanel, panelToggleSettings,
       monitorPanel, serviceStatusPanel, satelliteFiresPanel, climatePanel,
       ...(this.isDesktopApp && this.panels['runtime-config'] ? [this.panels['runtime-config']] : []),
     ]);
@@ -1401,6 +1442,7 @@ export class App {
     // Settings modal
     document.getElementById('settingsBtn')?.addEventListener('click', () => {
       document.getElementById('settingsModal')?.classList.add('active');
+      this.loadApiKeyValues();
     });
 
     document.getElementById('modalClose')?.addEventListener('click', () => {
@@ -1413,6 +1455,27 @@ export class App {
       }
     });
 
+    // Settings modal tab switching
+    document.querySelectorAll<HTMLButtonElement>('.settings-modal-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const targetTab = tab.dataset.settingsTab;
+        if (!targetTab) return;
+        document.querySelectorAll('.settings-modal-tab').forEach((t) => t.classList.remove('active'));
+        document.querySelectorAll('.settings-modal-panel').forEach((p) => p.classList.remove('active'));
+        tab.classList.add('active');
+        const panel = document.querySelector(`[data-settings-panel="${targetTab}"]`);
+        panel?.classList.add('active');
+        // Load API key values when switching to apikeys tab
+        if (targetTab === 'apikeys') {
+          this.loadApiKeyValues();
+        }
+      });
+    });
+
+    // API Keys save button
+    document.getElementById('apiKeysSaveBtn')?.addEventListener('click', () => {
+      this.saveApiKeys();
+    });
 
     // Header theme toggle button
     document.getElementById('headerThemeToggle')?.addEventListener('click', () => {
@@ -1643,6 +1706,60 @@ export class App {
         }
       });
     });
+  }
+
+  private loadApiKeyValues(): void {
+    const keyIds = [
+      { inputId: 'apikeyFirms', statusId: 'apikeyFirmsStatus', storageKey: 'fodi_apikey_firms' },
+      { inputId: 'apikeyOpenweather', statusId: 'apikeyOpenweatherStatus', storageKey: 'fodi_apikey_openweathermap' },
+      { inputId: 'apikeyAi', statusId: 'apikeyAiStatus', storageKey: 'fodi_apikey_ai_analysis' },
+    ];
+    for (const { inputId, statusId, storageKey } of keyIds) {
+      const input = document.getElementById(inputId) as HTMLInputElement | null;
+      const status = document.getElementById(statusId);
+      const savedValue = localStorage.getItem(storageKey) || '';
+      if (input) {
+        input.value = savedValue;
+      }
+      if (status) {
+        if (savedValue) {
+          status.textContent = '✓';
+          status.className = 'apikey-status saved';
+          status.title = 'API key salvata';
+        } else {
+          status.textContent = '';
+          status.className = 'apikey-status empty';
+          status.title = 'Nessuna API key configurata';
+        }
+      }
+    }
+  }
+
+  private saveApiKeys(): void {
+    const inputs = document.querySelectorAll<HTMLInputElement>('.apikey-input');
+    inputs.forEach((input) => {
+      const key = input.dataset.key;
+      if (!key) return;
+      const value = input.value.trim();
+      if (value) {
+        localStorage.setItem(key, value);
+      } else {
+        localStorage.removeItem(key);
+      }
+    });
+    // Update status indicators after save
+    this.loadApiKeyValues();
+    // Brief visual feedback
+    const btn = document.getElementById('apiKeysSaveBtn');
+    if (btn) {
+      const originalText = btn.textContent;
+      btn.textContent = '✓ Salvato!';
+      btn.classList.add('saved');
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.classList.remove('saved');
+      }, 2000);
+    }
   }
 
   private getLocalizedPanelName(panelKey: string, fallback: string): string {
@@ -2048,6 +2165,11 @@ export class App {
 
       return items;
     } catch (error) {
+      console.error(`[App] News category ${category} load failed:`, error);
+      const panel = this.newsPanels[category];
+      if (panel) {
+        panel.showError(t('common.feedUnavailable') || 'Non disponibile');
+      }
       this.statusPanel?.updateFeed(category.charAt(0).toUpperCase() + category.slice(1), {
         status: 'error',
         errorMessage: String(error),
@@ -2111,6 +2233,9 @@ export class App {
           this.flashMapForNews(intel);
         } else {
           delete this.newsByCategory['intel'];
+          if (intelPanel) {
+            intelPanel.showError(t('common.feedUnavailable') || 'Non disponibile');
+          }
           console.error('[App] Intel feed failed:', intelResult[0]?.reason);
         }
       }
@@ -2186,6 +2311,7 @@ export class App {
       }
     } catch {
       this.statusPanel?.updateApi('Finnhub', { status: 'error' });
+      this.panels['markets']?.showError(t('common.failedMarketData'));
     }
   }
 
