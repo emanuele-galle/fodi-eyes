@@ -225,7 +225,7 @@ export class MapContainer {
     }
   }
 
-  public setFlights(flights: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; origin: string; operator: string; aircraftType: string }>): void {
+  public setFlights(flights: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; verticalRate: number; squawk: string; origin: string; originCountry: string; operator: string; airline: string; aircraftType: string }>): void {
     if (this.useDeckGL) {
       this.deckGLMap?.setFlights(flights);
     }

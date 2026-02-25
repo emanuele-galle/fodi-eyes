@@ -211,3 +211,61 @@
 .popup-flights h4 { margin: 0 0 6px; font-size: 13px; color: var(--accent, #44ff88); }
 .popup-flights .popup-detail { font-size: 11px; color: var(--text-secondary, #ccc); padding: 2px 0; }
 .popup-flights .popup-detail span { font-weight: 600; color: var(--text, #e8e8e8); margin-right: 4px; }
+
+/* FR24-style flight popup */
+.popup-flights.fr24-style {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.popup-flights .flight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.popup-flights .flight-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.popup-flights .flight-phase {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.popup-flights .flight-phase.salita { background: #2ecc40; color: #000; }
+.popup-flights .flight-phase.discesa { background: #ff851b; color: #000; }
+.popup-flights .flight-phase.crociera { background: #0074d9; color: #fff; }
+.popup-flights .flight-airline {
+  font-size: 13px;
+  color: #7fdbff;
+  margin-bottom: 6px;
+}
+.popup-flights .flight-stats {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.popup-flights .flight-stat {
+  text-align: center;
+  flex: 1;
+}
+.popup-flights .flight-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+.popup-flights .flight-stat-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 2px;
+}
+.popup-flights .flight-icao {
+  opacity: 0.5;
+  font-size: 11px;
+}

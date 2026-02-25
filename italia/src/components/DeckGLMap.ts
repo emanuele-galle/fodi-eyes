@@ -145,7 +145,7 @@ export class DeckGLMap {
   private newsLocationFirstSeen = new Map<string, number>();
   private climateAnomalies: ClimateAnomaly[] = [];
   private italyRegionsGeoJson: GeoJSON.FeatureCollection | null = null;
-  private flightsData: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; origin: string; operator: string; aircraftType: string }> = [];
+  private flightsData: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; verticalRate: number; squawk: string; origin: string; originCountry: string; operator: string; airline: string; aircraftType: string }> = [];
   private dynamicWebcams: TerritorialWebcam[] = [];
 
   // Country highlight state
@@ -1377,39 +1377,87 @@ export class DeckGLMap {
 
   private createFlightsLayer(): IconLayer {
     type FlightData = typeof this.flightsData[number];
+
+    // FR24-style altitude color scale
+    const getFlightColor = (alt: number): [number, number, number, number] => {
+      if (alt <= 0) return [128, 128, 128, 200]; // ground — gray
+      if (alt < 2000) return [255, 200, 50, 220]; // very low — yellow
+      if (alt < 5000) return [255, 160, 0, 220]; // low — orange
+      if (alt < 8000) return [0, 200, 80, 220]; // medium — green
+      if (alt < 10000) return [0, 160, 255, 220]; // high — blue
+      return [160, 80, 255, 220]; // cruise — purple
+    };
+
+    // Airplane silhouette SVG (FR24-style, pointing up)
+    const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <path d="M18 2 L21 14 L32 18 L21 20 L23 32 L18 28 L13 32 L15 20 L4 18 L15 14 Z" fill="white" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>
+    </svg>`;
+    const planeIconUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(planeSvg);
+
     return new IconLayer<FlightData>({
       id: 'flights-layer',
       data: this.flightsData,
       getPosition: (d: FlightData) => [d.lon, d.lat],
       getAngle: (d: FlightData) => 360 - d.heading,
       getIcon: () => ({
-        url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-          '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
-          '<text x="16" y="24" text-anchor="middle" font-size="24">✈</text>' +
-          '</svg>'
-        ),
-        width: 32,
-        height: 32,
-        anchorY: 16,
-        anchorX: 16,
+        url: planeIconUrl,
+        width: 36,
+        height: 36,
+        anchorY: 18,
+        anchorX: 18,
+        mask: true,
       }),
-      getSize: 28,
+      getSize: 24,
+      sizeMinPixels: 14,
+      sizeMaxPixels: 32,
+      getColor: (d: FlightData) => getFlightColor(d.altitude),
       pickable: true,
       onClick: (info: PickingInfo) => {
         if (!info.object || !this.maplibreMap) return;
         const f = info.object as FlightData;
         const altFt = Math.round(f.altitude * 3.281);
+        const altM = Math.round(f.altitude);
         const speedKn = Math.round(f.velocity * 1.944);
-        const html = `<div class="popup-flights">
-          <h4>${escapeHtml(f.callsign)}</h4>
-          <div class="popup-detail"><span>Altitudine:</span> ${altFt.toLocaleString('it-IT')} ft (${Math.round(f.altitude).toLocaleString('it-IT')} m)</div>
-          <div class="popup-detail"><span>Velocità:</span> ${speedKn} kn (${Math.round(f.velocity)} m/s)</div>
-          <div class="popup-detail"><span>Rotta:</span> ${Math.round(f.heading)}°</div>
-          ${f.origin ? `<div class="popup-detail"><span>Origine:</span> ${escapeHtml(f.origin)}</div>` : ''}
-          ${f.operator ? `<div class="popup-detail"><span>Operatore:</span> ${escapeHtml(f.operator)}</div>` : ''}
-          ${f.aircraftType ? `<div class="popup-detail"><span>Tipo:</span> ${escapeHtml(f.aircraftType.replace('MILITARY_AIRCRAFT_TYPE_', ''))}</div>` : ''}
+        const speedKmh = Math.round(f.velocity * 3.6);
+        const vRateStr = f.verticalRate > 0 ? `↑ ${Math.round(f.verticalRate)} m/s` : f.verticalRate < 0 ? `↓ ${Math.round(Math.abs(f.verticalRate))} m/s` : '—';
+        const phase = f.verticalRate > 1 ? 'Salita' : f.verticalRate < -1 ? 'Discesa' : 'Crociera';
+
+        const airlineLine = f.airline
+          ? `<div class="popup-detail flight-airline"><span>${escapeHtml(f.airline)}</span></div>`
+          : '';
+        const countryLine = f.originCountry
+          ? `<div class="popup-detail"><span>Paese:</span> ${escapeHtml(f.originCountry)}</div>`
+          : '';
+        const squawkLine = f.squawk
+          ? `<div class="popup-detail"><span>Squawk:</span> ${escapeHtml(f.squawk)}${f.squawk === '7700' ? ' ⚠️ EMERGENZA' : f.squawk === '7600' ? ' 📡 RADIO FAILURE' : f.squawk === '7500' ? ' 🚨 HIJACK' : ''}</div>`
+          : '';
+
+        const html = `<div class="popup-flights fr24-style">
+          <div class="flight-header">
+            <h4>✈ ${escapeHtml(f.callsign)}</h4>
+            <span class="flight-phase ${phase.toLowerCase()}">${phase}</span>
+          </div>
+          ${airlineLine}
+          <div class="flight-stats">
+            <div class="flight-stat">
+              <div class="flight-stat-value">${altFt.toLocaleString('it-IT')}</div>
+              <div class="flight-stat-label">ft (${altM.toLocaleString('it-IT')} m)</div>
+            </div>
+            <div class="flight-stat">
+              <div class="flight-stat-value">${speedKmh}</div>
+              <div class="flight-stat-label">km/h (${speedKn} kn)</div>
+            </div>
+            <div class="flight-stat">
+              <div class="flight-stat-value">${Math.round(f.heading)}°</div>
+              <div class="flight-stat-label">rotta</div>
+            </div>
+          </div>
+          <div class="popup-detail"><span>V/Rate:</span> ${vRateStr}</div>
+          ${countryLine}
+          ${squawkLine}
+          <div class="popup-detail flight-icao"><span>ICAO:</span> ${escapeHtml(f.id.toUpperCase())}</div>
         </div>`;
-        new maplibregl.Popup({ maxWidth: '280px', closeButton: true })
+        new maplibregl.Popup({ maxWidth: '300px', closeButton: true })
           .setLngLat([f.lon, f.lat])
           .setHTML(html)
           .addTo(this.maplibreMap);
@@ -1464,7 +1512,7 @@ export class DeckGLMap {
     this.render();
   }
 
-  public setFlights(flights: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; origin: string; operator: string; aircraftType: string }>): void {
+  public setFlights(flights: Array<{ id: string; callsign: string; lat: number; lon: number; altitude: number; velocity: number; heading: number; verticalRate: number; squawk: string; origin: string; originCountry: string; operator: string; airline: string; aircraftType: string }>): void {
     this.flightsData = flights;
     this.render();
   }

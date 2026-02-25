@@ -711,18 +711,21 @@ app.post('/api/military/v1/list-military-flights', async (c) => {
         const res = await fetch('https://opensky-network.org/api/states/all?lamin=36&lomin=6&lamax=47&lomax=19');
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.states || []).slice(0, 100).map(s => ({
-          icao24: s[0],
-          callsign: (s[1] || '').trim(),
-          originCountry: s[2],
-          lon: s[5],
-          lat: s[6],
-          altitude: s[7] || s[13],
-          onGround: s[8],
-          velocity: s[9],
-          heading: s[10],
-          verticalRate: s[11],
-        }));
+        return (data.states || [])
+          .filter(s => !s[8]) // filter out on-ground
+          .map(s => ({
+            icao24: s[0],
+            callsign: (s[1] || '').trim(),
+            originCountry: s[2],
+            lon: s[5],
+            lat: s[6],
+            altitude: s[7] || s[13],
+            onGround: s[8],
+            velocity: s[9],
+            heading: s[10],
+            verticalRate: s[11],
+            squawk: s[14] || null,
+          }));
       });
       return c.json({ items, total: items.length });
     }
@@ -736,17 +739,60 @@ app.post('/api/military/v1/list-military-flights', async (c) => {
     }
     const res = await fetch(`${relayBase}/opensky?lamin=36&lomin=6&lamax=47&lomax=19`, { headers });
     const data = await res.json();
-    const items = (data.states || data || []).slice(0, 200).map(s => ({
-      icao24: s[0],
-      callsign: (s[1] || '').trim(),
-      originCountry: s[2],
-      lon: s[5], lat: s[6],
-      altitude: s[7],
-      onGround: s[8],
-      velocity: s[9],
-      heading: s[10],
-      verticalRate: s[11],
-    }));
+    const items = (data.states || data || [])
+      .filter(s => !s[8]) // filter out on-ground
+      .map(s => ({
+        icao24: s[0],
+        callsign: (s[1] || '').trim(),
+        originCountry: s[2],
+        lon: s[5], lat: s[6],
+        altitude: s[7],
+        onGround: s[8],
+        velocity: s[9],
+        heading: s[10],
+        verticalRate: s[11],
+        squawk: s[14] || null,
+      }));
+    return c.json({ items, total: items.length });
+  } catch (err) {
+    return c.json({ items: [], total: 0, error: err.message });
+  }
+});
+
+// ── All flights — OpenSky global flight data ─────────────────────────────────
+app.post('/api/flights/global', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const bb = body.boundingBox || {};
+    const sw = bb.southWest || { latitude: -90, longitude: -180 };
+    const ne = bb.northEast || { latitude: 90, longitude: 180 };
+
+    const cacheKey = `flights-global:${sw.latitude}:${sw.longitude}:${ne.latitude}:${ne.longitude}`;
+
+    const items = await cachedFetch(cacheKey, 2 * 60 * 1000, async () => {
+      const url = `https://opensky-network.org/api/states/all?lamin=${sw.latitude}&lamax=${ne.latitude}&lomin=${sw.longitude}&lomax=${ne.longitude}`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data.states || [])
+        .filter(s => !s[8] && s[5] != null && s[6] != null) // not on ground, has position
+        .map(s => ({
+          icao24: s[0],
+          callsign: (s[1] || '').trim(),
+          originCountry: s[2],
+          lon: s[5],
+          lat: s[6],
+          altitude: s[7] || s[13],
+          onGround: false,
+          velocity: s[9],
+          heading: s[10],
+          verticalRate: s[11],
+          squawk: s[14] || null,
+        }));
+    });
     return c.json({ items, total: items.length });
   } catch (err) {
     return c.json({ items: [], total: 0, error: err.message });
