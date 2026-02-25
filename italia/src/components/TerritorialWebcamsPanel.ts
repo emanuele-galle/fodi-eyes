@@ -4,17 +4,59 @@ import { escapeHtml } from '@/utils/sanitize';
 
 type TipoFilter = 'all' | TerritorialWebcam['tipo'];
 
+/** Dynamic webcams fetched from API (Open Data Hub) */
+let dynamicWebcams: TerritorialWebcam[] = [];
+let dynamicFetched = false;
+
+async function fetchDynamicWebcams(): Promise<void> {
+  if (dynamicFetched) return;
+  dynamicFetched = true;
+  try {
+    const res = await fetch('/api/webcams/dynamic');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data)) return;
+    // Deduplicate: skip if within ~500m of an existing static webcam
+    const existing = new Set(WEBCAMS_ITALIA.map(w => `${w.lat.toFixed(2)},${w.lon.toFixed(2)}`));
+    dynamicWebcams = data.filter((w: TerritorialWebcam) => {
+      const key = `${w.lat.toFixed(2)},${w.lon.toFixed(2)}`;
+      return !existing.has(key);
+    });
+  } catch {
+    // Silently fail — dynamic webcams are optional
+  }
+}
+
+function getAllWebcams(): TerritorialWebcam[] {
+  return [...WEBCAMS_ITALIA, ...dynamicWebcams];
+}
+
 // Portals with HLS stream extraction (play video directly via hls.js player)
 const HLS_PORTALS = ['skylinewebcams.com'];
 
+// YouTube portals: embed directly via youtube-nocookie.com
+const YOUTUBE_PORTALS = ['youtube.com', 'youtu.be'];
+
 // Other portals that need frame-proxy to bypass X-Frame-Options
-const FRAME_PROXY_DOMAINS = ['meteowebcam.it'];
+const FRAME_PROXY_DOMAINS = ['meteowebcam.it', 'serravalle.it', 'airportwebcams.net'];
+
+function extractYouTubeVideoId(url: string): string | null {
+  const match = url.match(/(?:v=|\/embed\/|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] ?? null : null;
+}
 
 function getIframeSrc(webcam: TerritorialWebcam): string {
   // SkylineWebcams: use HLS player for direct video stream
   if (HLS_PORTALS.some(d => webcam.url.includes(d))) {
     const title = `${webcam.comune} - ${webcam.localita}`;
     return `/api/webcam-player?url=${encodeURIComponent(webcam.url)}&title=${encodeURIComponent(title)}`;
+  }
+  // YouTube: embed directly via privacy-enhanced mode
+  if (YOUTUBE_PORTALS.some(d => webcam.url.includes(d))) {
+    const videoId = extractYouTubeVideoId(webcam.url);
+    if (videoId) {
+      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&rel=0`;
+    }
   }
   // Other portals: use frame-proxy
   if (FRAME_PROXY_DOMAINS.some(d => webcam.url.includes(d))) {
@@ -25,7 +67,7 @@ function getIframeSrc(webcam: TerritorialWebcam): string {
 
 function getRegionList(): string[] {
   const set = new Set<string>();
-  for (const w of WEBCAMS_ITALIA) {
+  for (const w of getAllWebcams()) {
     set.add(w.regione);
   }
   return Array.from(set).sort();
@@ -38,10 +80,16 @@ export class TerritorialWebcamsPanel extends Panel {
   private activeWebcam: TerritorialWebcam | null = null;
   private onWebcamSelect: ((webcam: TerritorialWebcam) => void) | null = null;
   private modalOverlay: HTMLDivElement | null = null;
+  /** Webcam IDs that failed to load at runtime */
+  private runtimeOffline = new Set<string>();
 
   constructor() {
     super({ id: 'webcam-territoriali', title: 'Webcam Territoriali' });
     this.render();
+    // Fetch dynamic webcams (Open Data Hub) and re-render when ready
+    fetchDynamicWebcams().then(() => {
+      if (dynamicWebcams.length > 0) this.render();
+    });
   }
 
   setWebcamSelectHandler(handler: (webcam: TerritorialWebcam) => void): void {
@@ -49,7 +97,7 @@ export class TerritorialWebcamsPanel extends Panel {
   }
 
   private getFilteredWebcams(): TerritorialWebcam[] {
-    return WEBCAMS_ITALIA.filter((w) => {
+    return getAllWebcams().filter((w) => {
       if (this.regionFilter !== 'all' && w.regione.toLowerCase() !== this.regionFilter) return false;
       if (this.provinciaFilter !== 'all' && w.provincia !== this.provinciaFilter) return false;
       if (this.tipoFilter !== 'all' && w.tipo !== this.tipoFilter) return false;
@@ -59,7 +107,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
   private getProvinceList(): string[] {
     const set = new Set<string>();
-    for (const w of WEBCAMS_ITALIA) {
+    for (const w of getAllWebcams()) {
       if (this.regionFilter === 'all' || w.regione.toLowerCase() === this.regionFilter) {
         set.add(w.provincia);
       }
@@ -69,7 +117,7 @@ export class TerritorialWebcamsPanel extends Panel {
 
   private getTipoList(): TerritorialWebcam['tipo'][] {
     const set = new Set<TerritorialWebcam['tipo']>();
-    for (const w of WEBCAMS_ITALIA) {
+    for (const w of getAllWebcams()) {
       if (this.regionFilter === 'all' || w.regione.toLowerCase() === this.regionFilter) {
         set.add(w.tipo);
       }
@@ -106,6 +154,20 @@ export class TerritorialWebcamsPanel extends Panel {
     iframe.allow = 'autoplay; fullscreen';
     iframe.allowFullscreen = true;
     iframe.setAttribute('loading', 'lazy');
+
+    // Error handling for modal iframe
+    iframe.addEventListener('error', () => {
+      this.runtimeOffline.add(webcam.id);
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'tw-viewer-error tw-modal-error';
+      errorDiv.innerHTML = `
+        <div class="tw-viewer-error-icon">&#x26A0;</div>
+        <div class="tw-viewer-error-text">Webcam non disponibile</div>
+        <div class="tw-viewer-error-sub">${escapeHtml(webcam.comune)} - ${escapeHtml(webcam.localita)}</div>
+      `;
+      iframe.replaceWith(errorDiv);
+    });
+
     overlay.appendChild(iframe);
 
     overlay.addEventListener('click', (e) => {
@@ -167,9 +229,41 @@ export class TerritorialWebcamsPanel extends Panel {
     iframe.allow = 'autoplay; fullscreen';
     iframe.allowFullscreen = true;
     iframe.setAttribute('loading', 'lazy');
+
+    // Error handling: if the webcam stream fails, show unavailable state
+    iframe.addEventListener('error', () => {
+      this.markWebcamOffline(webcam, viewer);
+    });
+
+    // Timeout fallback: if iframe doesn't load within 15s, mark as unavailable
+    const loadTimeout = setTimeout(() => {
+      if (!iframe.contentWindow) {
+        this.markWebcamOffline(webcam, viewer);
+      }
+    }, 15_000);
+    iframe.addEventListener('load', () => clearTimeout(loadTimeout));
+
     viewer.appendChild(iframe);
 
     return viewer;
+  }
+
+  private markWebcamOffline(webcam: TerritorialWebcam, viewer: HTMLDivElement): void {
+    this.runtimeOffline.add(webcam.id);
+    // Replace iframe with an error message inside the viewer
+    const iframe = viewer.querySelector('.tw-viewer-iframe');
+    if (iframe) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'tw-viewer-error';
+      errorDiv.innerHTML = `
+        <div class="tw-viewer-error-icon">&#x26A0;</div>
+        <div class="tw-viewer-error-text">Webcam non disponibile</div>
+        <div class="tw-viewer-error-sub">${escapeHtml(webcam.comune)} - ${escapeHtml(webcam.localita)}</div>
+      `;
+      iframe.replaceWith(errorDiv);
+    }
+    // Re-render the list to update the badge for this webcam
+    this.render();
   }
 
   private render(): void {
@@ -285,8 +379,9 @@ export class TerritorialWebcamsPanel extends Panel {
     list.className = 'tw-list';
 
     for (const webcam of filtered) {
+      const isOffline = !webcam.attiva || this.runtimeOffline.has(webcam.id);
       const row = document.createElement('div');
-      row.className = `tw-row${this.activeWebcam?.id === webcam.id ? ' active' : ''}`;
+      row.className = `tw-row${this.activeWebcam?.id === webcam.id ? ' active' : ''}${isOffline ? ' tw-row-offline' : ''}`;
 
       const info = document.createElement('div');
       info.className = 'tw-row-info';
@@ -310,9 +405,21 @@ export class TerritorialWebcamsPanel extends Panel {
       tipoBadge.textContent = webcam.tipo;
       badges.appendChild(tipoBadge);
 
+      if (webcam.source === 'api') {
+        const apiBadge = document.createElement('span');
+        apiBadge.className = 'tw-badge tw-badge-api';
+        apiBadge.textContent = 'API';
+        badges.appendChild(apiBadge);
+      }
+
       const statusBadge = document.createElement('span');
-      statusBadge.className = `tw-badge ${webcam.attiva ? 'tw-badge-online' : 'tw-badge-offline'}`;
-      statusBadge.textContent = webcam.attiva ? 'LIVE' : 'OFF';
+      if (this.runtimeOffline.has(webcam.id)) {
+        statusBadge.className = 'tw-badge tw-badge-offline';
+        statusBadge.textContent = 'ERRORE';
+      } else {
+        statusBadge.className = `tw-badge ${webcam.attiva ? 'tw-badge-online' : 'tw-badge-offline'}`;
+        statusBadge.textContent = webcam.attiva ? 'LIVE' : 'OFF';
+      }
       badges.appendChild(statusBadge);
 
       row.appendChild(info);

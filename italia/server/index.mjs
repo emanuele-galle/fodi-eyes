@@ -858,6 +858,8 @@ const FRAME_PROXY_ALLOWED = new Set([
   'tg24.sky.it', 'video.sky.it', 'videoplatform.sky.it',
   'www.rainews.it', 'rainews.it',
   'tg.la7.it', 'www.la7.it',
+  'www.serravalle.it', 'serravalle.it',
+  'airportwebcams.net', 'www.airportwebcams.net',
 ]);
 
 app.get('/api/frame-proxy', async (c) => {
@@ -1389,6 +1391,502 @@ app.get('/api/health', (c) => c.json({ status: 'ok', name: 'fodi-eyes', uptime: 
 
 // Version endpoint
 app.get('/api/version', (c) => c.json({ version: '1.0.0', name: 'fodi-eyes' }));
+
+// ── News Summarization via OpenRouter ──
+app.post('/api/news/v1/summarize-article', async (c) => {
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+  if (!OPENROUTER_API_KEY) {
+    return c.json({ summary: '', provider: 'openrouter', model: '', cached: false, tokens: 0, fallback: true, skipped: true, reason: 'OPENROUTER_API_KEY not configured', error: '', errorType: '' });
+  }
+
+  try {
+    const body = await c.req.json();
+    const { provider = 'openrouter', headlines = [], mode = 'brief', variant = 'full', lang = 'it', geoContext = '' } = body;
+
+    if (!headlines.length) {
+      return c.json({ summary: '', provider, model: '', cached: false, tokens: 0, fallback: false, skipped: false, reason: '', error: 'Headlines array required', errorType: 'ValidationError' });
+    }
+
+    // Only OpenRouter supported in this deployment
+    if (provider !== 'openrouter') {
+      return c.json({ summary: '', provider, model: '', cached: false, tokens: 0, fallback: true, skipped: true, reason: `Provider ${provider} not available`, error: '', errorType: '' });
+    }
+
+    const sanitized = headlines.slice(0, 10).map(h => typeof h === 'string' ? h.slice(0, 500) : '');
+    const headlineText = sanitized.map((h, i) => `${i + 1}. ${h}`).join('\n');
+    const dateContext = `Current date: ${new Date().toISOString().split('T')[0]}.`;
+    const langInstruction = lang && lang !== 'en' ? `\nIMPORTANT: Output the summary in ${lang.toUpperCase()} language.` : '';
+
+    let systemPrompt, userPrompt;
+    if (mode === 'brief') {
+      systemPrompt = `${dateContext}\n\nSummarize the key development in 2-3 sentences.\nRules:\n- Lead with WHAT happened and WHERE - be specific\n- NEVER start with "Breaking news" or TV-style openings\n- Start directly with the subject\n- No bullet points, no meta-commentary${langInstruction}`;
+      userPrompt = `Summarize the top story:\n${headlineText}${geoContext ? '\n\n' + geoContext : ''}`;
+    } else if (mode === 'analysis') {
+      systemPrompt = `${dateContext}\n\nProvide analysis in 2-3 sentences. Be direct and specific.${langInstruction}`;
+      userPrompt = `What's the key pattern or risk?\n${headlineText}${geoContext ? '\n\n' + geoContext : ''}`;
+    } else if (mode === 'translate') {
+      systemPrompt = `You are a professional news translator. Translate into ${variant}. Output ONLY the translated text.`;
+      userPrompt = `Translate to ${variant}:\n${headlines[0]}`;
+    } else {
+      systemPrompt = `${dateContext}\n\nSynthesize in 2 sentences max.${langInstruction}`;
+      userPrompt = `Key takeaway:\n${headlineText}`;
+    }
+
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://fodi-eyes.fodivps2.cloud',
+        'X-Title': 'FODI Eyes',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.3,
+        max_tokens: 150,
+        top_p: 0.9,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[SummarizeArticle] API error:', response.status, errorText);
+      return c.json({ summary: '', provider: 'openrouter', model: '', cached: false, tokens: 0, fallback: true, skipped: false, reason: '', error: `API error ${response.status}`, errorType: '' });
+    }
+
+    const data = await response.json();
+    let summary = (data.choices?.[0]?.message?.content || '').trim();
+    summary = summary.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    return c.json({
+      summary,
+      model: data.model || 'google/gemini-3-flash-preview',
+      provider: 'openrouter',
+      cached: false,
+      tokens: data.usage?.total_tokens || 0,
+      fallback: false,
+      skipped: false,
+      reason: '',
+      error: '',
+      errorType: '',
+    });
+  } catch (err) {
+    console.error('[SummarizeArticle] Error:', err.message);
+    return c.json({ summary: '', provider: 'openrouter', model: '', cached: false, tokens: 0, fallback: true, skipped: false, reason: '', error: err.message, errorType: err.name || 'Error' });
+  }
+});
+
+// ── Military — Theater Posture (OpenSky global military flights analysis) ─────
+const MILITARY_PREFIXES = [
+  'RCH', 'REACH', 'MOOSE', 'EVAC', 'DUSTOFF', 'PEDRO',
+  'DUKE', 'HAVOC', 'KNIFE', 'WARHAWK', 'VIPER', 'RAGE', 'FURY',
+  'SHELL', 'TEXACO', 'ARCO', 'ESSO', 'PETRO',
+  'SENTRY', 'AWACS', 'MAGIC', 'DISCO', 'DARKSTAR',
+  'COBRA', 'PYTHON', 'RAPTOR', 'EAGLE', 'HAWK', 'TALON',
+  'BOXER', 'OMNI', 'TOPCAT', 'SKULL', 'REAPER', 'HUNTER',
+  'ARMY', 'NAVY', 'USAF', 'USMC', 'USCG',
+  'AE', 'CNV', 'PAT', 'SAM', 'EXEC',
+  'NATO', 'GAF', 'RRF', 'RAF', 'FAF', 'IAF', 'RNLAF', 'BAF', 'DAF', 'HAF', 'PAF',
+  'SWORD', 'LANCE', 'ARROW', 'SPARTAN',
+  'RSAF', 'EMIRI', 'UAEAF', 'KAF', 'QAF', 'BAHAF', 'OMAAF',
+  'IRIAF', 'IRG', 'IRGC', 'TAF', 'TUAF',
+  'RSD', 'RF', 'RFF', 'VKS', 'CHN', 'PLAAF', 'PLA',
+];
+const AIRLINE_CODES_SET = new Set([
+  'SVA', 'QTR', 'THY', 'UAE', 'ETD', 'GFA', 'MEA', 'RJA', 'KAC', 'ELY',
+  'IAW', 'IRA', 'MSR', 'SYR', 'PGT', 'AXB', 'FDB', 'KNE', 'FAD', 'ADY', 'OMA',
+  'BAW', 'AFR', 'DLH', 'KLM', 'AUA', 'SAS', 'FIN', 'LOT', 'AZA', 'TAP', 'IBE',
+  'VLG', 'RYR', 'EZY', 'WZZ', 'NOZ', 'BEL', 'AEE', 'ROT',
+  'AIC', 'CPA', 'SIA', 'MAS', 'THA', 'VNM', 'JAL', 'ANA', 'KAL', 'AAR', 'EVA',
+  'AAL', 'DAL', 'UAL', 'SWA', 'JBU', 'ASA', 'NKS', 'FFT', 'SKW', 'RPA',
+  'ANZ', 'QFA', 'VOZ', 'JST', 'LAN', 'AVA', 'GLO', 'TAM', 'AEA', 'ARG',
+  'ETH', 'KQA', 'SAA', 'RAM', 'MSR', 'NIG', 'RWD', 'SUD',
+]);
+function isMilCallsign(cs) {
+  if (!cs) return false;
+  const u = cs.toUpperCase().trim();
+  for (const p of MILITARY_PREFIXES) { if (u.startsWith(p)) return true; }
+  if (/^[A-Z]{4,}\d{1,3}$/.test(u)) return true;
+  if (/^[A-Z]{3}\d{1,2}$/.test(u)) {
+    if (!AIRLINE_CODES_SET.has(u.slice(0, 3))) return true;
+  }
+  return false;
+}
+function detectType(cs) {
+  if (!cs) return 'unknown';
+  const u = cs.toUpperCase().trim();
+  if (/^(SHELL|TEXACO|ARCO|ESSO|PETRO|KC|STRAT)/.test(u)) return 'tanker';
+  if (/^(SENTRY|AWACS|MAGIC|DISCO|DARKSTAR|E3|E8|E6)/.test(u)) return 'awacs';
+  if (/^(RCH|REACH|MOOSE|EVAC|DUSTOFF|C17|C5|C130|C40)/.test(u)) return 'transport';
+  if (/^(HOMER|OLIVE|JAKE|PSEUDO|GORDO|RC|U2|SR)/.test(u)) return 'reconnaissance';
+  if (/^(RQ|MQ|REAPER|PREDATOR|GLOBAL)/.test(u)) return 'drone';
+  if (/^(DEATH|BONE|DOOM|B52|B1|B2)/.test(u)) return 'bomber';
+  return 'unknown';
+}
+const POSTURE_THEATERS = [
+  { id: 'iran-theater', name: 'Iran Theater', bounds: { north: 42, south: 20, east: 65, west: 30 }, thresholds: { elevated: 8, critical: 20 }, strikeIndicators: { minTankers: 2, minAwacs: 1, minFighters: 5 } },
+  { id: 'taiwan-theater', name: 'Taiwan Strait', bounds: { north: 30, south: 18, east: 130, west: 115 }, thresholds: { elevated: 6, critical: 15 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 4 } },
+  { id: 'baltic-theater', name: 'Baltic Theater', bounds: { north: 65, south: 52, east: 32, west: 10 }, thresholds: { elevated: 5, critical: 12 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+  { id: 'blacksea-theater', name: 'Black Sea', bounds: { north: 48, south: 40, east: 42, west: 26 }, thresholds: { elevated: 4, critical: 10 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+  { id: 'korea-theater', name: 'Korean Peninsula', bounds: { north: 43, south: 33, east: 132, west: 124 }, thresholds: { elevated: 5, critical: 12 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+  { id: 'south-china-sea', name: 'South China Sea', bounds: { north: 25, south: 5, east: 121, west: 105 }, thresholds: { elevated: 6, critical: 15 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 4 } },
+  { id: 'east-med-theater', name: 'Eastern Mediterranean', bounds: { north: 37, south: 33, east: 37, west: 25 }, thresholds: { elevated: 4, critical: 10 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+  { id: 'israel-gaza-theater', name: 'Israel/Gaza', bounds: { north: 33, south: 29, east: 36, west: 33 }, thresholds: { elevated: 3, critical: 8 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+  { id: 'yemen-redsea-theater', name: 'Yemen/Red Sea', bounds: { north: 22, south: 11, east: 54, west: 32 }, thresholds: { elevated: 4, critical: 10 }, strikeIndicators: { minTankers: 1, minAwacs: 1, minFighters: 3 } },
+];
+
+app.post('/api/military/v1/get-theater-posture', async (c) => {
+  try {
+    const cached = apiCache.get('theater-posture');
+    if (cached && Date.now() - cached.ts < 5 * 60 * 1000) return c.json(cached.data);
+
+    // Fetch global OpenSky data
+    const relayUrl = process.env.WS_RELAY_URL;
+    let states = [];
+    try {
+      const url = relayUrl
+        ? relayUrl.replace('wss://', 'https://').replace('ws://', 'http://') + '/opensky'
+        : 'https://opensky-network.org/api/states/all';
+      const headers = {};
+      const secret = process.env.RELAY_SHARED_SECRET;
+      if (relayUrl && secret) {
+        headers[process.env.RELAY_AUTH_HEADER || 'x-relay-key'] = secret;
+        headers['Authorization'] = `Bearer ${secret}`;
+      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      const res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const data = await res.json();
+        states = data.states || [];
+      }
+    } catch { /* OpenSky unavailable */ }
+
+    // Filter military flights
+    const milFlights = [];
+    for (const s of states) {
+      const [icao24, callsign, , , , lon, lat, altitude, onGround, velocity, heading] = s;
+      if (lat == null || lon == null || onGround) continue;
+      const cs = (callsign || '').trim();
+      if (!isMilCallsign(cs)) continue;
+      milFlights.push({ id: icao24, callsign: cs, lat, lon, altitude: altitude || 0, heading: heading || 0, speed: velocity || 0, aircraftType: detectType(cs) });
+    }
+
+    // Calculate posture per theater
+    const theaters = POSTURE_THEATERS.map(theater => {
+      const tFlights = milFlights.filter(f =>
+        f.lat >= theater.bounds.south && f.lat <= theater.bounds.north &&
+        f.lon >= theater.bounds.west && f.lon <= theater.bounds.east
+      );
+      const total = tFlights.length;
+      const tankers = tFlights.filter(f => f.aircraftType === 'tanker').length;
+      const awacs = tFlights.filter(f => f.aircraftType === 'awacs').length;
+      const fighters = tFlights.filter(f => f.aircraftType === 'fighter').length;
+      const postureLevel = total >= theater.thresholds.critical ? 'critical'
+        : total >= theater.thresholds.elevated ? 'elevated' : 'normal';
+      const strikeCapable = tankers >= theater.strikeIndicators.minTankers &&
+        awacs >= theater.strikeIndicators.minAwacs && fighters >= theater.strikeIndicators.minFighters;
+      const ops = [];
+      if (strikeCapable) ops.push('strike_capable');
+      if (tankers > 0) ops.push('aerial_refueling');
+      if (awacs > 0) ops.push('airborne_early_warning');
+      return { theater: theater.id, postureLevel, activeFlights: total, trackedVessels: 0, activeOperations: ops, assessedAt: Date.now() };
+    });
+
+    const result = { theaters };
+    apiCache.set('theater-posture', { data: result, ts: Date.now() });
+    return c.json(result);
+  } catch (err) {
+    return c.json({ theaters: [] });
+  }
+});
+
+// ── Intelligence — Country Intel Brief (OpenRouter, Italian) ─────────────────
+const TIER1_COUNTRIES = {
+  US: 'Stati Uniti', RU: 'Russia', CN: 'Cina', UA: 'Ucraina', IR: 'Iran',
+  IL: 'Israele', TW: 'Taiwan', KP: 'Corea del Nord', SA: 'Arabia Saudita', TR: 'Turchia',
+  PL: 'Polonia', DE: 'Germania', FR: 'Francia', GB: 'Regno Unito', IN: 'India',
+  PK: 'Pakistan', SY: 'Siria', YE: 'Yemen', MM: 'Myanmar', VE: 'Venezuela',
+  IT: 'Italia', JP: 'Giappone', KR: 'Corea del Sud', BR: 'Brasile', MX: 'Messico',
+  AU: 'Australia', EG: 'Egitto', NG: 'Nigeria', ZA: 'Sudafrica', AR: 'Argentina',
+};
+
+app.post('/api/intelligence/v1/get-country-intel-brief', async (c) => {
+  try {
+    const body = await c.req.json();
+    const countryCode = (body.countryCode || '').toUpperCase().trim();
+    if (!countryCode || !/^[A-Z]{2}$/.test(countryCode)) {
+      return c.json({ countryCode: '', countryName: '', brief: '', model: '', generatedAt: Date.now() });
+    }
+
+    const cacheKey = `intel-brief-${countryCode}`;
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < 2 * 60 * 60 * 1000) return c.json(cached.data);
+
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+    if (!OPENROUTER_API_KEY) {
+      return c.json({ countryCode, countryName: TIER1_COUNTRIES[countryCode] || countryCode, brief: '', model: '', generatedAt: Date.now() });
+    }
+
+    const countryName = TIER1_COUNTRIES[countryCode] || countryCode;
+    const dateStr = new Date().toISOString().split('T')[0];
+
+    const systemPrompt = `Sei un analista senior di intelligence che fornisce briefing completi sulla situazione dei paesi. Data corrente: ${dateStr}. Fornisci il contesto geopolitico appropriato per la data corrente.
+
+Scrivi un briefing di intelligence conciso per il paese richiesto coprendo:
+1. Situazione attuale - cosa sta succedendo ora
+2. Postura militare e sicurezza
+3. Fattori di rischio chiave
+4. Contesto regionale
+5. Prospettive e punti di attenzione
+
+Regole:
+- Sii specifico e analitico
+- 4-5 paragrafi, 250-350 parole
+- Nessuna speculazione oltre ciò che i dati supportano
+- Usa un linguaggio chiaro, non gergale
+- IMPORTANTE: Scrivi SEMPRE in italiano`;
+
+    const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://fodi-eyes.fodivps2.cloud',
+      },
+      body: JSON.stringify({
+        model: 'openrouter/free',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Paese: ${countryName} (${countryCode})` },
+        ],
+        temperature: 0.4,
+        max_tokens: 900,
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!resp.ok) {
+      return c.json({ countryCode, countryName, brief: '', model: '', generatedAt: Date.now() });
+    }
+
+    const data = await resp.json();
+    const brief = data.choices?.[0]?.message?.content?.trim() || '';
+    const model = data.model || 'meta-llama/llama-3.1-8b-instant';
+
+    const result = { countryCode, countryName, brief, model, generatedAt: Date.now() };
+    if (brief) apiCache.set(cacheKey, { data: result, ts: Date.now() });
+    return c.json(result);
+  } catch (err) {
+    return c.json({ countryCode: '', countryName: '', brief: '', model: '', generatedAt: Date.now() });
+  }
+});
+
+// === WEBCAM DYNAMIC API (Open Data Hub + Windy Webcams) ===
+const WINDY_API_KEY = process.env.WINDY_WEBCAMS_API_KEY || 'lBdSn2GcgSAG1pWrPv4qe3gW6EvlUpB4';
+
+app.get('/api/webcams/dynamic', async (c) => {
+  const region = c.req.query('region')?.toLowerCase();
+
+  try {
+    // Fetch both sources in parallel
+    const [odhData, windyData] = await Promise.all([
+      // Open Data Hub (Alto Adige)
+      cachedFetch('odh-webcams', 30 * 60 * 1000, async () => {
+        const res = await fetch(
+          'https://tourism.opendatahub.com/v1/WebcamInfo?pagesize=500&active=true&origin=null&fields=Id,Webcamname,GpsInfo,Webcamurl,ImageGallery',
+          {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+        if (!res.ok) throw new Error(`ODH: ${res.status}`);
+        return res.json();
+      }).catch(() => null),
+
+      // Windy Webcams API v3 — disabled: API doesn't support country/bbox filter
+      // and global pagination is too inefficient. Key saved for future use.
+      // WINDY_API_KEY stored but not currently used.
+      Promise.resolve(null),
+    ]);
+
+    let webcams = [];
+
+    // Process Open Data Hub
+    if (odhData) {
+      const items = (odhData?.Items || odhData || []);
+      // Webcamname is an object with language keys: {de: "...", it: "...", en: "..."}
+      const getName = (nameObj) => {
+        if (typeof nameObj === 'string') return nameObj;
+        if (nameObj && typeof nameObj === 'object') {
+          return nameObj.it || nameObj.de || nameObj.en || Object.values(nameObj)[0] || 'Sconosciuto';
+        }
+        return 'Sconosciuto';
+      };
+
+      const odhWebcams = items
+        .filter(item => {
+          const gps = item.GpsInfo?.[0];
+          return gps?.Latitude && gps?.Longitude;
+        })
+        .map(item => {
+          const gps = item.GpsInfo[0];
+          const lat = gps.Latitude;
+          const lon = gps.Longitude;
+          let url = item.Webcamurl || '';
+          const gallery = item.ImageGallery;
+          if (Array.isArray(gallery) && gallery.length > 0) {
+            url = gallery[0].ImageUrl || gallery[0].Url || url;
+          }
+          const name = getName(item.Webcamname);
+          let regione = 'Trentino Alto Adige';
+          if (lat < 46.0) regione = 'Veneto';
+          if (lat < 45.5 && lon < 11) regione = 'Lombardia';
+          return {
+            id: `odh-${item.Id}`,
+            comune: name.split(' - ')[0] || name,
+            localita: name,
+            provincia: '',
+            regione,
+            lat,
+            lon,
+            tipo: 'meteo',
+            portale: 'opendatahub.com',
+            url,
+            attiva: true,
+            source: 'api',
+          };
+        });
+      webcams.push(...odhWebcams);
+    }
+
+    // Process Windy Webcams (API v3 format)
+    if (windyData?.webcams) {
+      const regionByCoords = (lat, lon) => {
+        // Italian region mapping by lat/lon bounding boxes
+        if (lat > 46.3 && lon > 10.3 && lon < 12.5) return 'Trentino Alto Adige';
+        if (lat > 45.6 && lon > 13.0) return 'Friuli Venezia Giulia';
+        if (lat > 45.5 && lon > 11 && lon < 13.1) return 'Veneto';
+        if (lat > 45.0 && lon < 9.5) return 'Piemonte';
+        if (lat > 45.4 && lon > 6.6 && lon < 7.9) return 'Valle d\'Aosta';
+        if (lat > 44.5 && lon > 8.0 && lon < 10.1) return 'Liguria';
+        if (lat > 44.7 && lon < 11.5 && lon > 9.0) return 'Lombardia';
+        if (lat > 43.7 && lon > 10.3 && lon < 12.8) return 'Emilia Romagna';
+        if (lat > 42.5 && lon > 9.5 && lon < 12.0) return 'Toscana';
+        if (lat > 42.0 && lon > 12.0 && lon < 13.2) return 'Umbria';
+        if (lat > 42.5 && lon > 13.0 && lon < 14.0) return 'Marche';
+        if (lat > 41.2 && lon > 11.5 && lon < 14.0) return 'Lazio';
+        if (lat > 41.6 && lon > 13.5 && lon < 15.0) return 'Abruzzo';
+        if (lat > 41.4 && lon > 14.0 && lon < 15.2) return 'Molise';
+        if (lat > 40.5 && lon > 13.5 && lon < 16.0) return 'Campania';
+        if (lat > 39.8 && lon > 15.0 && lon < 18.6) return 'Puglia';
+        if (lat > 39.9 && lon > 15.3 && lon < 17.2) return 'Basilicata';
+        if (lat > 37.9 && lon > 15.5 && lon < 17.2) return 'Calabria';
+        if (lat < 38.5 && lon > 12.0 && lon < 15.7) return 'Sicilia';
+        if (lat < 41.3 && lon < 10.0 && lon > 8.0) return 'Sardegna';
+        return 'Italia';
+      };
+
+      const windyWebcams = windyData.webcams
+        .filter(cam => {
+          // Only keep cams actually in Italy (nearby search has radius)
+          const loc = cam.location || {};
+          const cc = loc.country_code || loc.country || '';
+          return cc === 'IT' || cc === 'Italy';
+        })
+        .map(cam => {
+          const loc = cam.location || {};
+          const img = cam.images?.current?.preview || cam.images?.current?.thumbnail || '';
+          return {
+            id: `windy-${cam.webcamId}`,
+            comune: loc.city || 'Sconosciuto',
+            localita: cam.title || loc.city || '',
+            provincia: '',
+            regione: regionByCoords(loc.latitude, loc.longitude),
+            lat: loc.latitude,
+            lon: loc.longitude,
+            tipo: 'panoramica',
+            portale: 'windy.com',
+            url: img || `https://www.windy.com/webcams/${cam.webcamId}`,
+            attiva: true,
+            source: 'api',
+          };
+        });
+      webcams.push(...windyWebcams);
+    }
+
+    // Filter by region if specified
+    if (region) {
+      webcams = webcams.filter(w => w.regione.toLowerCase().includes(region));
+    }
+
+    return c.json(webcams);
+  } catch (err) {
+    console.error('[webcams/dynamic] Error:', err.message);
+    return c.json([]);
+  }
+});
+
+// === TRAFFIC SNAPSHOT PROXY (bypass CORS for highway webcam images) ===
+const TRAFFIC_SNAPSHOT_DOMAINS = new Set([
+  'www.autobrennero.it', 'autobrennero.it',
+  'www.autostrade.it', 'autostrade.it',
+  'www.cfrv.it', 'cfrv.it',
+  'www.strfriv.it', 'strfriv.it',
+  'www.infoviaggiando.it', 'infoviaggiando.it',
+]);
+
+app.get('/api/traffic-snapshot', async (c) => {
+  const url = c.req.query('url');
+  if (!url) return c.text('Missing url parameter', 400);
+
+  let parsedUrl;
+  try { parsedUrl = new URL(url); } catch { return c.text('Invalid URL', 400); }
+
+  if (!TRAFFIC_SNAPSHOT_DOMAINS.has(parsedUrl.hostname)) {
+    return c.text(`Domain not allowed: ${parsedUrl.hostname}`, 403);
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Referer': parsedUrl.origin + '/',
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return c.text(`Upstream error: ${response.status}`, 502);
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const body = await response.arrayBuffer();
+
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=30',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (error) {
+    const isTimeout = error.name === 'AbortError';
+    return c.text(isTimeout ? 'Timeout fetching snapshot' : `Error: ${error.message}`, 502);
+  }
+});
 
 // Catch-all for unknown API routes - return empty JSON instead of 404 HTML
 app.all('/api/*', (c) => c.json({ error: 'Not found' }, 404));
