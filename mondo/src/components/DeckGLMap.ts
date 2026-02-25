@@ -2555,6 +2555,35 @@ export class DeckGLMap {
     const rawClickLayerId = info.layer?.id || '';
     const layerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
 
+    // Live flights — show inline popup with flight details
+    if (layerId === 'all-flights-layer' && this.maplibreMap) {
+      type AFD = typeof this.allFlightsData[number];
+      const f = info.object as AFD;
+      const altFt = Math.round(f.altitude * 3.281);
+      const speedKmh = Math.round(f.velocity * 3.6);
+      const vRate = f.verticalRate > 1 ? '↑ Salita' : f.verticalRate < -1 ? '↓ Discesa' : '— Crociera';
+      const airline = f.airline ? `<div style="color:#7fdbff;margin-bottom:4px">${f.airline}</div>` : '';
+      const country = f.originCountry ? `<div><span style="opacity:.6">Paese:</span> ${f.originCountry}</div>` : '';
+      const sqk = f.squawk ? `<div><span style="opacity:.6">Squawk:</span> ${f.squawk}${f.squawk === '7700' ? ' ⚠️' : ''}</div>` : '';
+      const html = `<div style="font-family:system-ui;min-width:200px">
+        <h4 style="margin:0 0 4px">✈ ${f.callsign}</h4>
+        ${airline}
+        <div style="display:flex;gap:12px;padding:6px 0;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);margin:4px 0">
+          <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${altFt.toLocaleString('it-IT')}</div><div style="font-size:10px;opacity:.5">ft</div></div>
+          <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${speedKmh}</div><div style="font-size:10px;opacity:.5">km/h</div></div>
+          <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${Math.round(f.heading)}°</div><div style="font-size:10px;opacity:.5">rotta</div></div>
+        </div>
+        <div><span style="opacity:.6">Fase:</span> ${vRate}</div>
+        ${country}${sqk}
+        <div style="opacity:.4;font-size:11px;margin-top:4px">ICAO: ${f.id.toUpperCase()}</div>
+      </div>`;
+      new maplibregl.Popup({ maxWidth: '300px', closeButton: true })
+        .setLngLat([f.lon, f.lat])
+        .setHTML(html)
+        .addTo(this.maplibreMap);
+      return;
+    }
+
     // Hotspots show popup with related news
     if (layerId === 'hotspots-layer') {
       const hotspot = info.object as Hotspot;
@@ -2862,7 +2891,8 @@ export class DeckGLMap {
         { key: 'datacenters', label: t('components.deckgl.layers.aiDataCenters'), icon: '&#128421;' },
         { key: 'military', label: t('components.deckgl.layers.militaryActivity'), icon: '&#9992;' },
         { key: 'ais', label: t('components.deckgl.layers.shipTraffic'), icon: '&#128674;' },
-        { key: 'flights', label: t('components.deckgl.layers.flightDelays'), icon: '&#9992;' },
+        { key: 'liveFlights', label: t('components.deckgl.layers.liveFlights'), icon: '&#9992;' },
+        { key: 'flights', label: t('components.deckgl.layers.flightDelays'), icon: '&#128507;' },
         { key: 'protests', label: t('components.deckgl.layers.protests'), icon: '&#128226;' },
         { key: 'ucdpEvents', label: t('components.deckgl.layers.ucdpEvents'), icon: '&#9876;' },
         { key: 'displacement', label: t('components.deckgl.layers.displacementFlows'), icon: '&#128101;' },
