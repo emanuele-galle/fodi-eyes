@@ -2545,7 +2545,7 @@ export class DeckGLMap {
 
     const rawClickLayerId = info.layer?.id || '';
     const layerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
-    console.log('[DeckGLMap] Click on layer:', layerId, 'object:', info.object);
+
 
     // Live flights — show inline popup with flight details
     if (layerId === 'all-flights-layer' && this.maplibreMap) {
