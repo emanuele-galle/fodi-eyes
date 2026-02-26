@@ -1633,6 +1633,21 @@
         "specialOps": "Special Operations",
         "vip": "VIP Transport"
       },
+      "operators": {
+        "usaf": "US Air Force",
+        "usn": "US Navy",
+        "usmc": "US Marines",
+        "usa": "US Army",
+        "raf": "Royal Air Force",
+        "rn": "Royal Navy",
+        "faf": "French Air Force",
+        "gaf": "German Air Force",
+        "plaaf": "PLA Air Force",
+        "plan": "PLA Navy",
+        "vks": "Russian Aerospace",
+        "iaf": "Israeli Air Force",
+        "nato": "NATO"
+      },
       "altitude": "ALTITUDE",
       "ground": "Ground",
       "speed": "SPEED",
@@ -1654,7 +1669,29 @@
       "usniIntel": "USNI Intel",
       "usniSource": "Source: USNI News Fleet Tracker",
       "approximatePosition": "Position approximate — based on USNI weekly report, not real-time AIS.",
-      "darkDescription": "⚠ Vessel has gone dark - AIS signal lost. May indicate sensitive operations."
+      "darkDescription": "⚠ Vessel has gone dark - AIS signal lost. May indicate sensitive operations.",
+      "operators": {
+        "usn": "US Navy",
+        "uscg": "US Coast Guard",
+        "rn": "Royal Navy",
+        "fn": "French Navy",
+        "plan": "PLA Navy",
+        "ruf": "Russian Navy",
+        "jmsdf": "Japan Maritime SDF",
+        "rokn": "ROK Navy"
+      },
+      "types": {
+        "carrier": "Aircraft Carrier",
+        "destroyer": "Destroyer",
+        "frigate": "Frigate",
+        "submarine": "Submarine",
+        "amphibious": "Amphibious",
+        "patrol": "Patrol",
+        "auxiliary": "Auxiliary",
+        "research": "Research",
+        "icebreaker": "Icebreaker",
+        "special": "Special Operations"
+      }
     },
     "militaryCluster": {
       "flightActivity": {

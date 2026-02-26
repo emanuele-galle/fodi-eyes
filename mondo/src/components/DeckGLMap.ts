@@ -1752,15 +1752,16 @@ export class DeckGLMap {
       pickable: false,
     });
 
-    // Picking layer — invisible ScatterplotLayer for reliable click detection
+    // Picking layer — near-invisible ScatterplotLayer for reliable click detection
+    // Note: alpha must be >= 1 for deck.gl picking to detect the object
     const pickLayer = new ScatterplotLayer<AFD>({
       id: 'all-flights-layer',
       data: this.allFlightsData,
       getPosition: (d: AFD) => [d.lon, d.lat],
       getRadius: 20000,
-      radiusMinPixels: 12,
-      radiusMaxPixels: 20,
-      getFillColor: [0, 0, 0, 0],
+      radiusMinPixels: 14,
+      radiusMaxPixels: 24,
+      getFillColor: [0, 0, 0, 1],
       pickable: true,
     });
 
