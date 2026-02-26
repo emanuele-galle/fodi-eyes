@@ -571,8 +571,8 @@
       "historicalPlayback": "เล่นย้อนหลัง"
     },
     "pizzint": {
-      "title": "ดัชนีพิซซ่าเพนตากอน",
-      "defcon": "DEFCON {{level}}",
+      "title": "ดัชนีภัยคุกคามทางภูมิรัฐศาสตร์",
+      "defcon": "ระดับ {{level}}",
       "updated": "อัปเดต {{timeAgo}}",
       "tensionsTitle": "ความตึงเครียดภูมิรัฐศาสตร์",
       "source": "แหล่งที่มา:",
@@ -586,11 +586,11 @@
       "minutesAgo": "{{m}}น. ที่แล้ว",
       "hoursAgo": "{{h}}ชม. ที่แล้ว",
       "defconLabels": {
-        "1": "COCKED PISTOL - ความพร้อมสูงสุด",
-        "2": "FAST PACE - กองกำลังพร้อมรบ",
-        "3": "ROUND HOUSE - เพิ่มความพร้อมรบ",
-        "4": "DOUBLE TAKE - เพิ่มการเฝ้าระวังข่าวกรอง",
-        "5": "FADE OUT - ความพร้อมต่ำสุด"
+        "1": "วิกฤต",
+        "2": "รุนแรง",
+        "3": "สำคัญ",
+        "4": "ปานกลาง",
+        "5": "ต่ำ"
       }
     },
     "strategicPosture": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "มอสสาด/IDF",
       "nato_hq": "สำนักงานใหญ่นาโต้",
       "pla_mss_activity": "กิจกรรม PLA/MSS",
-      "pentagon_pizza_index": "ดัชนีพิซซ่าเพนตากอน",
+      "pentagon_pizza_index": "ดัชนีภัยคุกคามทางภูมิรัฐศาสตร์",
       "piracy_conflict": "โจรสลัด/ขัดแย้ง",
       "qatar_al_udeid": "กาตาร์/อัลอูเดด",
       "saudi_gip_mbs": "ซาอุดิอาระเบีย GIP/MBS",

@@ -599,8 +599,8 @@
       "historicalPlayback": "Ιστορική Αναπαραγωγή"
     },
     "pizzint": {
-      "title": "Pentagon Pizza Index",
-      "defcon": "DEFCON {{level}}",
+      "title": "Δείκτης Γεωπολιτικής Απειλής",
+      "defcon": "ΕΠΙΠΕΔΟ {{level}}",
       "updated": "Ενημερώθηκε {{timeAgo}}",
       "tensionsTitle": "Γεωπολιτικές Εντάσεις",
       "source": "Πηγή:",
@@ -614,11 +614,11 @@
       "minutesAgo": "{{m}}λ πριν",
       "hoursAgo": "{{h}}ω πριν",
       "defconLabels": {
-        "1": "COCKED PISTOL - ΜΕΓΙΣΤΗ ΕΤΟΙΜΟΤΗΤΑ",
-        "2": "FAST PACE - ΕΝΟΠΛΕΣ ΔΥΝΑΜΕΙΣ ΕΤΟΙΜΕΣ",
-        "3": "ROUND HOUSE - ΑΥΞΗΣΗ ΕΤΟΙΜΟΤΗΤΑΣ ΔΥΝΑΜΕΩΝ",
-        "4": "DOUBLE TAKE - ΑΥΞΗΜΕΝΗ ΕΠΙΤΗΡΗΣΗ ΠΛΗΡΟΦΟΡΙΩΝ",
-        "5": "FADE OUT - ΧΑΜΗΛΟΤΕΡΗ ΕΤΟΙΜΟΤΗΤΑ"
+        "1": "ΚΡΙΣΙΜΟ",
+        "2": "ΣΟΒΑΡΟ",
+        "3": "ΣΗΜΑΝΤΙΚΟ",
+        "4": "ΜΕΤΡΙΟ",
+        "5": "ΧΑΜΗΛΟ"
       }
     },
     "strategicPosture": {
@@ -1725,7 +1725,7 @@
       "mossad_idf": "Mossad/IDF",
       "nato_hq": "Αρχηγείο NATO",
       "pla_mss_activity": "Δραστηριότητα PLA/MSS",
-      "pentagon_pizza_index": "Pentagon Pizza Index",
+      "pentagon_pizza_index": "Δείκτης Γεωπολιτικής Απειλής",
       "piracy_conflict": "Πειρατεία/Σύγκρουση",
       "qatar_al_udeid": "Κατάρ/Al Udeid",
       "saudi_gip_mbs": "Σαουδική GIP/MBS",

@@ -759,10 +759,10 @@
       "info": "INFO"
     },
     "pizzint": {
-      "title": "Indeks pizzy Pentagonu",
+      "title": "Indeks Zagrożenia Geopolitycznego",
       "tensionsTitle": "Napięcia geopolityczne",
       "source": "Źródło:",
-      "defcon": "DEFCON {{level}}",
+      "defcon": "POZIOM {{level}}",
       "updated": "Zaktualizowano {{timeAgo}}",
       "statusClosed": "ZAMKNIĘTE",
       "statusSpike": "SKOK",
@@ -774,11 +774,11 @@
       "minutesAgo": "{{m}}m temu",
       "hoursAgo": "{{h}}h temu",
       "defconLabels": {
-        "1": "PISTOLET Z NACIĘCIEM - MAKSYMALNA GOTOWOŚĆ",
-        "2": "SZYBKIE TEMPO – SIŁY ZBROJNE W GOTOWIE",
-        "3": "OKRĄGŁY DOM - ZWIĘKSZ GOTOWOŚĆ SIŁOWĄ",
-        "4": "PODWÓJNE UJĘCIE - ZEGAREK O WIĘKSZEJ INTELIGENCJI",
-        "5": "FADE OUT - NAJNIŻSZA GOTOWOŚĆ"
+        "1": "KRYTYCZNY",
+        "2": "POWAŻNY",
+        "3": "ZNACZNY",
+        "4": "UMIARKOWANY",
+        "5": "NISKI"
       }
     },
     "playback": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "Mossad/IDF",
       "nato_hq": "Siedziba NATO",
       "pla_mss_activity": "Aktywność PLA/MSS",
-      "pentagon_pizza_index": "Indeks pizzy Pentagonu",
+      "pentagon_pizza_index": "Indeks Zagrożenia Geopolitycznego",
       "piracy_conflict": "Piractwo/konflikt",
       "qatar_al_udeid": "Katar/Al Udeid",
       "saudi_gip_mbs": "Saudyjski GIP/MBS",

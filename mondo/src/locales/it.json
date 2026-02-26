@@ -804,10 +804,10 @@
       "info": "INFO"
     },
     "pizzint": {
-      "title": "Indice Pizza del Pentagono",
+      "title": "Indice Allerta Geopolitica",
       "tensionsTitle": "Tensioni geopolitiche",
       "source": "Fonte:",
-      "defcon": "DEFCON {{level}}",
+      "defcon": "LIVELLO {{level}}",
       "updated": "Aggiornato {{timeAgo}}",
       "statusClosed": "CHIUSO",
       "statusSpike": "PICCO",
@@ -819,11 +819,11 @@
       "minutesAgo": "{{m}}m fa",
       "hoursAgo": "{{h}}h fa",
       "defconLabels": {
-        "1": "PISTOLA ARMATA - PRONTEZZA MASSIMA",
-        "2": "RITMO RAPIDO - FORZE ARMATE PRONTE",
-        "3": "ROUND HOUSE - AUMENTARE PRONTEZZA FORZE",
-        "4": "DOPPIO SGUARDO - INTELLIGENCE RAFFORZATA",
-        "5": "FADE OUT - PRONTEZZA MINIMA"
+        "1": "CRITICO — ESCALATION IMMINENTE",
+        "2": "SEVERO — FORZE IN STATO DI ALLERTA",
+        "3": "SOSTANZIALE — AUMENTO PRONTEZZA",
+        "4": "MODERATO — SORVEGLIANZA RAFFORZATA",
+        "5": "BASSO — MONITORAGGIO ORDINARIO"
       }
     },
     "playback": {
@@ -1746,7 +1746,7 @@
       "mossad_idf": "Mossad/IDF",
       "nato_hq": "Quartier generale della NATO",
       "pla_mss_activity": "Attività PLA/MSS",
-      "pentagon_pizza_index": "Indice della pizza del Pentagono",
+      "pentagon_pizza_index": "Indice Allerta Geopolitica",
       "piracy_conflict": "Pirateria/Conflitto",
       "qatar_al_udeid": "Qatar/Al-Udeid",
       "saudi_gip_mbs": "GIP/MBS saudita",
@@ -2117,7 +2117,7 @@
     }
   },
   "components.pizzint": {
-    "defcon": "DEFCON {{level}}"
+    "defcon": "LIVELLO {{level}}"
   },
   "components.stablecoins": {
     "token": "Token"

@@ -571,8 +571,8 @@
       "historicalPlayback": "Gecmis Kayit Oynatma"
     },
     "pizzint": {
-      "title": "Pentagon Pizza Endeksi",
-      "defcon": "DEFCON {{level}}",
+      "title": "Jeopolitik Tehdit Endeksi",
+      "defcon": "SEVİYE {{level}}",
       "updated": "{{timeAgo}} guncellendi",
       "tensionsTitle": "Jeopolitik Gerilimler",
       "source": "Kaynak:",
@@ -586,11 +586,11 @@
       "minutesAgo": "{{m}}dk once",
       "hoursAgo": "{{h}}sa once",
       "defconLabels": {
-        "1": "KURBALI TABANCA - MAKSIMUM HAZIRLIK",
-        "2": "HIZLI TEMPO - SILAHLI KUVVETLER HAZIR",
-        "3": "YUVARLAK EV - KUVVET HAZIRLIGINI ARTIR",
-        "4": "CIFT KONTROL - ARTIRILMIS ISTIHBARAT GOZETIMI",
-        "5": "SOLMA - EN DUSUK HAZIRLIK"
+        "1": "KRİTİK",
+        "2": "CİDDİ",
+        "3": "ÖNEMLI",
+        "4": "ILIMLI",
+        "5": "DÜŞÜK"
       }
     },
     "strategicPosture": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "Mossad/IDF",
       "nato_hq": "NATO Karargahi",
       "pla_mss_activity": "PLA/MSS Faaliyeti",
-      "pentagon_pizza_index": "Pentagon Pizza Endeksi",
+      "pentagon_pizza_index": "Jeopolitik Tehdit Endeksi",
       "piracy_conflict": "Korsanlik/Catisma",
       "qatar_al_udeid": "Katar/El Udeid",
       "saudi_gip_mbs": "Suudi GIP/MBS",

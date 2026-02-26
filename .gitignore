@@ -46,3 +46,4 @@ mondo/new-world-monitor.png
 
 # Claudedocs (AI session artifacts)
 .claudedocs/
+**/rpc-gateway.mjs

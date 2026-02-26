@@ -556,10 +556,10 @@
       "info": "INFO"
     },
     "pizzint": {
-      "title": "Índice de Pizza do Pentágono",
+      "title": "Índice de Ameaça Geopolítica",
       "tensionsTitle": "Tensões Geopolíticas",
       "source": "Fonte:",
-      "defcon": "DEFCON{{level}}",
+      "defcon": "NÍVEL {{level}}",
       "updated": "Atualizado {{timeAgo}}",
       "statusClosed": "FECHADO",
       "statusSpike": "PICO",
@@ -571,11 +571,11 @@
       "minutesAgo": "{{m}}m atrás",
       "hoursAgo": "{{h}}h atrás",
       "defconLabels": {
-        "1": "PISTOLA ARMADA - PRONTIDÃO MÁXIMA",
-        "2": "RITMO RÁPIDO - FORÇAS ARMADAS PRONTAS",
-        "3": "CASA REDONDA - AUMENTA A PRONTIDÃO DA FORÇA",
-        "4": "DOUBLE TAKE - RELÓGIO DE INTELIGÊNCIA AUMENTADA",
-        "5": "FADE OUT - PRONTIDÃO MAIS BAIXA"
+        "1": "CRÍTICO",
+        "2": "SEVERO",
+        "3": "SUBSTANCIAL",
+        "4": "MODERADO",
+        "5": "BAIXO"
       }
     },
     "stablecoins": {
@@ -1557,7 +1557,7 @@
       "mossad_idf": "Mossad/IDF",
       "nato_hq": "Quartel General da OTAN",
       "pla_mss_activity": "Atividade PLA/MSS",
-      "pentagon_pizza_index": "Índice de Pizza do Pentágono",
+      "pentagon_pizza_index": "Índice de Ameaça Geopolítica",
       "piracy_conflict": "Pirataria/Conflito",
       "qatar_al_udeid": "Catar/Al Udeid",
       "saudi_gip_mbs": "GIP/MBS saudita",

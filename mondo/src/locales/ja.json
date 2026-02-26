@@ -571,8 +571,8 @@
       "historicalPlayback": "ヒストリカル再生"
     },
     "pizzint": {
-      "title": "ペンタゴンピザ指数",
-      "defcon": "DEFCON {{level}}",
+      "title": "地政学的脅威指数",
+      "defcon": "レベル {{level}}",
       "updated": "{{timeAgo}}に更新",
       "tensionsTitle": "地政学的緊張",
       "source": "ソース:",
@@ -586,11 +586,11 @@
       "minutesAgo": "{{m}}分前",
       "hoursAgo": "{{h}}時間前",
       "defconLabels": {
-        "1": "COCKED PISTOL — 最大即応態勢",
-        "2": "FAST PACE — 軍即応態勢",
-        "3": "ROUND HOUSE — 即応態勢強化",
-        "4": "DOUBLE TAKE — 情報監視強化",
-        "5": "FADE OUT — 最低即応態勢"
+        "1": "危機的",
+        "2": "深刻",
+        "3": "重大",
+        "4": "中程度",
+        "5": "低い"
       }
     },
     "strategicPosture": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "モサド/IDF",
       "nato_hq": "NATO本部",
       "pla_mss_activity": "PLA/MSS活動",
-      "pentagon_pizza_index": "ペンタゴンピザ指数",
+      "pentagon_pizza_index": "地政学的脅威指数",
       "piracy_conflict": "海賊/紛争",
       "qatar_al_udeid": "カタール/アルウデイド",
       "saudi_gip_mbs": "サウジGIP/MBS",

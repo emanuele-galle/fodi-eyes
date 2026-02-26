@@ -571,8 +571,8 @@
       "historicalPlayback": "历史回放"
     },
     "pizzint": {
-      "title": "五角大楼披萨指数",
-      "defcon": "DEFCON {{level}}",
+      "title": "地缘政治威胁指数",
+      "defcon": "级别 {{level}}",
       "updated": "更新于{{timeAgo}}",
       "tensionsTitle": "地缘政治紧张局势",
       "source": "来源：",
@@ -586,11 +586,11 @@
       "minutesAgo": "{{m}}分钟前",
       "hoursAgo": "{{h}}小时前",
       "defconLabels": {
-        "1": "手枪上膛 - 最高战备",
-        "2": "快速节奏 - 武装部队就绪",
-        "3": "圆屋 - 提高部队战备",
-        "4": "双重确认 - 加强情报监视",
-        "5": "淡出 - 最低战备"
+        "1": "危急",
+        "2": "严重",
+        "3": "重大",
+        "4": "中等",
+        "5": "低"
       }
     },
     "strategicPosture": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "摩萨德/以色列国防军",
       "nato_hq": "NATO总部",
       "pla_mss_activity": "解放军/国安部活动",
-      "pentagon_pizza_index": "五角大楼披萨指数",
+      "pentagon_pizza_index": "地缘政治威胁指数",
       "piracy_conflict": "海盗/冲突",
       "qatar_al_udeid": "卡塔尔/乌代德",
       "saudi_gip_mbs": "沙特GIP/MBS",

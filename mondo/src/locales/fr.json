@@ -571,8 +571,8 @@
       "historicalPlayback": "Lecture historique"
     },
     "pizzint": {
-      "title": "Index des pizzas du Pentagone",
-      "defcon": "DEFCON {{level}}",
+      "title": "Indice de Menace Géopolitique",
+      "defcon": "NIVEAU {{level}}",
       "updated": "{{timeAgo}} mis à jour",
       "tensionsTitle": "Tensions géopolitiques",
       "source": "Source:",
@@ -586,11 +586,11 @@
       "minutesAgo": "il y a {{m}} min",
       "hoursAgo": "il y a {{h}} h",
       "defconLabels": {
-        "1": "PISTOLET ARMÉ - PRÉPARATION MAXIMALE",
-        "2": "RYTHME RAPIDE - FORCES ARMÉES PRÊTES",
-        "3": "MAISON RONDE - AUGMENTER LA PRÉPARATION DE LA FORCE",
-        "4": "DOUBLE PRISE - VEILLE À INTELLIGENCE AUGMENTÉE",
-        "5": "FADE OUT - PRÉPARATION LA PLUS FAIBLE"
+        "1": "CRITIQUE",
+        "2": "SÉVÈRE",
+        "3": "SUBSTANTIEL",
+        "4": "MODÉRÉ",
+        "5": "FAIBLE"
       }
     },
     "strategicPosture": {
@@ -1697,7 +1697,7 @@
       "mossad_idf": "Mossad/FDI",
       "nato_hq": "QG de l'OTAN",
       "pla_mss_activity": "Activité PLA/MSS",
-      "pentagon_pizza_index": "Index des pizzas du Pentagone",
+      "pentagon_pizza_index": "Indice de Menace Géopolitique",
       "piracy_conflict": "Piratage/conflit",
       "qatar_al_udeid": "Qatar/Al Udeid",
       "saudi_gip_mbs": "GIP/MBS saoudiens",
