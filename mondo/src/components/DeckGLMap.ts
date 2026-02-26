@@ -1076,7 +1076,7 @@ export class DeckGLMap {
 
     // Live flights layer (FR24-style all aircraft from OpenSky)
     if (mapLayers.liveFlights && this.allFlightsData.length > 0) {
-      layers.push(this.createAllFlightsLayer());
+      layers.push(...this.createAllFlightsLayer());
     }
 
     // Strategic waterways layer
@@ -1725,7 +1725,7 @@ export class DeckGLMap {
     });
   }
 
-  private createAllFlightsLayer(): IconLayer {
+  private createAllFlightsLayer(): Layer[] {
     type AFD = typeof this.allFlightsData[number];
     const getFlightColor = (alt: number): [number, number, number, number] => {
       if (alt <= 0) return [128, 128, 128, 200];
@@ -1737,8 +1737,10 @@ export class DeckGLMap {
     };
     const planeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><path d="M18 2 L21 14 L32 18 L21 20 L23 32 L18 28 L13 32 L15 20 L4 18 L15 14 Z" fill="white" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/></svg>`;
     const planeIconUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(planeSvg);
-    return new IconLayer<AFD>({
-      id: 'all-flights-layer',
+
+    // Visual layer — renders the rotated plane icons
+    const iconLayer = new IconLayer<AFD>({
+      id: 'all-flights-icon-layer',
       data: this.allFlightsData,
       getPosition: (d: AFD) => [d.lon, d.lat],
       getAngle: (d: AFD) => 360 - d.heading,
@@ -1747,34 +1749,22 @@ export class DeckGLMap {
       sizeMinPixels: 10,
       sizeMaxPixels: 28,
       getColor: (d: AFD) => getFlightColor(d.altitude),
-      pickable: true,
-      onClick: (info: PickingInfo) => {
-        if (!info.object || !this.maplibreMap) return;
-        const f = info.object as AFD;
-        const altFt = Math.round(f.altitude * 3.281);
-        const speedKmh = Math.round(f.velocity * 3.6);
-        const vRate = f.verticalRate > 1 ? '↑ Salita' : f.verticalRate < -1 ? '↓ Discesa' : '— Crociera';
-        const airline = f.airline ? `<div style="color:#7fdbff;margin-bottom:4px">${f.airline}</div>` : '';
-        const country = f.originCountry ? `<div><span style="opacity:.6">Paese:</span> ${f.originCountry}</div>` : '';
-        const sqk = f.squawk ? `<div><span style="opacity:.6">Squawk:</span> ${f.squawk}${f.squawk === '7700' ? ' ⚠️' : ''}</div>` : '';
-        const html = `<div style="font-family:system-ui;min-width:200px">
-          <h4 style="margin:0 0 4px">✈ ${f.callsign}</h4>
-          ${airline}
-          <div style="display:flex;gap:12px;padding:6px 0;border-top:1px solid rgba(255,255,255,.15);border-bottom:1px solid rgba(255,255,255,.15);margin:4px 0">
-            <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${altFt.toLocaleString('it-IT')}</div><div style="font-size:10px;opacity:.5">ft</div></div>
-            <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${speedKmh}</div><div style="font-size:10px;opacity:.5">km/h</div></div>
-            <div style="text-align:center;flex:1"><div style="font-size:15px;font-weight:700">${Math.round(f.heading)}°</div><div style="font-size:10px;opacity:.5">rotta</div></div>
-          </div>
-          <div><span style="opacity:.6">Fase:</span> ${vRate}</div>
-          ${country}${sqk}
-          <div style="opacity:.4;font-size:11px;margin-top:4px">ICAO: ${f.id.toUpperCase()}</div>
-        </div>`;
-        new maplibregl.Popup({ maxWidth: '300px', closeButton: true })
-          .setLngLat([f.lon, f.lat])
-          .setHTML(html)
-          .addTo(this.maplibreMap);
-      },
+      pickable: false,
     });
+
+    // Picking layer — invisible ScatterplotLayer for reliable click detection
+    const pickLayer = new ScatterplotLayer<AFD>({
+      id: 'all-flights-layer',
+      data: this.allFlightsData,
+      getPosition: (d: AFD) => [d.lon, d.lat],
+      getRadius: 20000,
+      radiusMinPixels: 12,
+      radiusMaxPixels: 20,
+      getFillColor: [0, 0, 0, 0],
+      pickable: true,
+    });
+
+    return [iconLayer, pickLayer];
   }
 
   private createWaterwaysLayer(): ScatterplotLayer {
@@ -2554,6 +2544,7 @@ export class DeckGLMap {
 
     const rawClickLayerId = info.layer?.id || '';
     const layerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
+    console.log('[DeckGLMap] Click on layer:', layerId, 'object:', info.object);
 
     // Live flights — show inline popup with flight details
     if (layerId === 'all-flights-layer' && this.maplibreMap) {
