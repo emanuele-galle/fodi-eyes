@@ -67,6 +67,11 @@ jobs:
             EXTERNAL_CHECK=$(curl -sf --max-time 10 "https://fodi-eyes.fodivps2.cloud/" -o /dev/null && echo "OK" || echo "FAIL")
             echo "External check: $EXTERNAL_CHECK"
 
+            # Docker cleanup - remove old images and build cache
+            echo "=== Cleaning up old Docker resources ==="
+            docker image prune -f 2>/dev/null || true
+            docker builder prune -f --filter "until=24h" 2>/dev/null || true
+
             echo "=== Deploy complete ==="
             docker compose ps
 
